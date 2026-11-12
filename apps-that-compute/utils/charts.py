@@ -34,35 +34,37 @@ class Palette:
     sequential: tuple[str, ...]
 
 
+# The bands are the forecast color blended into the page background, and
+# ``background`` must match the theme's backgroundColor.
 _LIGHT = Palette(
-    series=("#008A7B", "#E8590C", "#5B5BD6", "#D6409F", "#0B84E5", "#B87A00"),
-    forecast="#008A7B",
-    band_outer="#DDF0EC",
-    band_inner="#B5E0D7",
-    background="#FFFFFF",
-    actual="#3E4A48",
-    last_year="#A3ADAB",
-    supply="#E8590C",
-    highlight="#E8590C",
-    highlight_opacity=0.07,
+    series=("#C2410C", "#008A7B", "#5B5BD6", "#B7791F", "#BE185D", "#0369A1"),
+    forecast="#C2410C",
+    band_outer="#F3DFD4",
+    band_inner="#EAC2AE",
+    background="#FBF9F4",
+    actual="#4A4036",
+    last_year="#B1A799",
+    supply="#008A7B",
+    highlight="#1F1A14",
+    highlight_opacity=0.05,
     gain="#008A7B",
-    loss="#E8590C",
-    sequential=("#EAF6F3", "#A6DCD2", "#4FB3A4", "#008A7B", "#005B55"),
+    loss="#C2410C",
+    sequential=("#FBEEE4", "#F0C2A1", "#DC8350", "#C2410C", "#802A07"),
 )
 _DARK = Palette(
-    series=("#12A08F", "#E5641A", "#6E6AE8", "#D9529F", "#2F8FE8", "#BC8000"),
-    forecast="#12A08F",
-    band_outer="#11292A",
-    band_inner="#16403F",
-    background="#0B1012",
-    actual="#C5D1CF",
-    last_year="#5E6A68",
-    supply="#E5641A",
+    series=("#E0703A", "#1E9E93", "#7B76EE", "#C08A1C", "#E0558F", "#3A9BDA"),
+    forecast="#E0703A",
+    band_outer="#352216",
+    band_inner="#56311D",
+    background="#15130F",
+    actual="#D6CDBF",
+    last_year="#6B6258",
+    supply="#1E9E93",
     highlight="#FFFFFF",
     highlight_opacity=0.05,
-    gain="#12A08F",
-    loss="#E5641A",
-    sequential=("#10292A", "#165352", "#1C8B80", "#5BBFB1", "#97DACF"),
+    gain="#1E9E93",
+    loss="#E0703A",
+    sequential=("#2A1A12", "#4C2716", "#91441F", "#C9663A", "#F2B48F"),
 )
 
 
@@ -211,7 +213,7 @@ def fan_chart(
     series.append(marks)
     return {
         "dataset": {"source": data},
-        "legend": {"data": legend, "top": 0, "right": 0, "icon": "roundRect"},
+        "legend": {"data": legend, "top": 0, "right": 6, "icon": "roundRect", "itemGap": 16},
         "grid": {"left": 8, "right": 16, "top": 36, "bottom": 8, "containLabel": True},
         "tooltip": {
             "trigger": "axis",
@@ -246,7 +248,7 @@ def outcome_histogram(outcomes: pd.DataFrame, target: float) -> dict[str, Any]:
     target_bin = labels[int(np.clip(np.searchsorted(edges, target) - 1, 0, 31))]
     return {
         "dataset": {"source": data},
-        "legend": {"top": 0, "right": 0, "icon": "roundRect"},
+        "legend": {"top": 0, "right": 6, "icon": "roundRect", "itemGap": 16},
         "grid": {"left": 8, "right": 8, "top": 36, "bottom": 8, "containLabel": True},
         "tooltip": {"trigger": "axis", "valueFormatter": "percent"},
         "xAxis": {"type": "category", "axisLabel": {"interval": 7}},
@@ -551,7 +553,7 @@ def scenario_lines(weekly: pd.DataFrame) -> dict[str, Any]:
     return {
         "dataset": {"source": weekly.reset_index()},
         "color": list(colors.series),
-        "legend": {"top": 0, "right": 0, "icon": "roundRect", "type": "scroll"},
+        "legend": {"top": 0, "right": 6, "icon": "roundRect", "itemGap": 16, "type": "scroll"},
         "grid": {"left": 8, "right": 16, "top": 36, "bottom": 8, "containLabel": True},
         "tooltip": {"trigger": "axis", "valueFormatter": "%,d units"},
         "xAxis": {"type": "time", "splitLine": {"show": False}},

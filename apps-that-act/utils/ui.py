@@ -30,7 +30,7 @@ FLAG_COLORS: dict[str, BadgeColor] = {
 }
 ACTION_BADGES: dict[str, BadgeColor] = {
     "Approved": "green",
-    "Approved with changes": "violet",
+    "Approved with changes": "blue",
     "Rejected": "orange",
     "Held": "gray",
 }

@@ -17,8 +17,9 @@ Demonstrates:
   ``on_select`` callback applies the clicked levers
 - ``st.metric`` cards with sparklines, a plain-language forecast brief, and a
   scenario comparison with ``ButtonColumn`` row actions and an ECharts boxplot
-- ``@st.dialog`` to save scenarios, ``st.download_button``, and a dual
-  light/dark theme with a CVD-checked chart palette
+- ``@st.dialog`` to save scenarios, ``st.download_button``, and a warm
+  editorial light/dark theme (serif headings, paper tones, pill buttons) with a
+  CVD-checked chart palette
 
 All data is synthetic. Replace ``model.load_history`` with your own query and
 fit the ``Product`` parameters from it.

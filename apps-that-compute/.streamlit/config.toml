@@ -1,23 +1,23 @@
-# "Cairn" theme: dual light/dark with compact dashboard spacing, adapted from
-# the skill's bi-dashboard template. Categorical palettes were checked with a
-# CVD validator in both modes (adjacent pairs; the first three slots also pass
-# all-pairs for scatter charts).
+# "Cairn Lab" theme: a warm, editorial look with serif headings on paper-toned
+# backgrounds, soft cards, and pill buttons, in light and dark. Categorical
+# palettes were checked with a CVD validator in both modes (adjacent pairs; the
+# first three slots also pass all-pairs for scatter charts).
 
 [theme]
-font = "'Plus Jakarta Sans':https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200..800&display=swap"
-headingFont = "'Plus Jakarta Sans':https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200..800&display=swap"
+font = "'Instrument Sans':https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..700&display=swap"
+headingFont = "'Fraunces':https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..800&display=swap"
 codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100..800&display=swap"
 baseFontSize = 14
 baseFontWeight = 400
 codeFontSize = "13px"
-headingFontSizes = ["28px", "20px", "16px", "15px", "14px", "12px"]
-headingFontWeights = [700, 650, 650, 600, 600, 600]
-metricValueFontSize = "1.75rem"
-metricValueFontWeight = 700
-baseRadius = "0.75rem"
-buttonRadius = "0.6rem"
+headingFontSizes = ["34px", "22px", "17px", "15px", "14px", "12px"]
+headingFontWeights = [600, 600, 600, 600, 600, 600]
+metricValueFontSize = "1.85rem"
+metricValueFontWeight = 600
+baseRadius = "large"
+buttonRadius = "full"
 showWidgetBorder = true
-showSidebarBorder = true
+showSidebarBorder = false
 linkUnderline = false
 paddingTop = "1rem"
 paddingBottom = "3rem"
@@ -27,103 +27,110 @@ paddingTop = "1rem"
 paddingBottom = "1.5rem"
 
 [theme.light]
-primaryColor = "#007A6D"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F2F6F5"
-codeBackgroundColor = "#F2F6F5"
-textColor = "#0F1A19"
-linkColor = "#007A6D"
-borderColor = "#E1E8E6"
-codeTextColor = "#33403E"
-blueColor = "#0B84E5"
-greenColor = "#16A34A"
-yellowColor = "#CA8A04"
-orangeColor = "#EA580C"
-redColor = "#DC2626"
-violetColor = "#7C5BD6"
-grayColor = "#6B7472"
+primaryColor = "#C2410C"
+backgroundColor = "#FBF9F4"
+secondaryBackgroundColor = "#F2EDE3"
+codeBackgroundColor = "#F2EDE3"
+textColor = "#1F1A14"
+linkColor = "#B23C0B"
+borderColor = "#E5DDCF"
+codeTextColor = "#4A4036"
+blueColor = "#0369A1"
+greenColor = "#3F7D20"
+yellowColor = "#B7791F"
+orangeColor = "#C2410C"
+redColor = "#B91C1C"
+violetColor = "#7C3AED"
+grayColor = "#7A7268"
 chartCategoricalColors = [
+    "#C2410C",
     "#008A7B",
-    "#E8590C",
     "#5B5BD6",
-    "#D6409F",
-    "#0B84E5",
-    "#B87A00",
-    "#8E4EC6",
-    "#E5484D",
+    "#B7791F",
+    "#BE185D",
+    "#0369A1",
+    "#4D8A0C",
+    "#7C3AED",
 ]
 chartSequentialColors = [
-    "#EAF6F3",
-    "#CDEBE5",
-    "#A6DCD2",
-    "#7BC9BC",
-    "#4FB3A4",
-    "#239C8C",
-    "#008A7B",
-    "#00726A",
-    "#005B55",
-    "#004441",
+    "#FBEEE4",
+    "#F7DCC8",
+    "#F0C2A1",
+    "#E7A377",
+    "#DC8350",
+    "#CF6532",
+    "#C2410C",
+    "#A13509",
+    "#802A07",
+    "#5F1F05",
 ]
-dataframeBorderColor = "#E1E8E6"
-dataframeHeaderBackgroundColor = "#F6F9F8"
-dataframeHeaderTextColor = "#56625F"
+dataframeBorderColor = "#E5DDCF"
+dataframeHeaderBackgroundColor = "#F5F0E7"
+dataframeHeaderTextColor = "#5E554A"
 
 [theme.dark]
-primaryColor = "#0A8275"
-backgroundColor = "#0B1012"
-secondaryBackgroundColor = "#151C1E"
-codeBackgroundColor = "#151C1E"
-textColor = "#E6EDEC"
-linkColor = "#5FD3C3"
-borderColor = "#243032"
-codeTextColor = "#C5D1CF"
-blueColor = "#3B9BFF"
-greenColor = "#34D399"
-yellowColor = "#FACC15"
-orangeColor = "#FB923C"
-redColor = "#F87171"
-violetColor = "#A78BFA"
-grayColor = "#8C9896"
+primaryColor = "#C8501E"
+backgroundColor = "#15130F"
+secondaryBackgroundColor = "#211D18"
+codeBackgroundColor = "#211D18"
+textColor = "#EEE8DE"
+linkColor = "#F0956A"
+borderColor = "#342E26"
+codeTextColor = "#D6CDBF"
+blueColor = "#3A9BDA"
+greenColor = "#7DB45A"
+yellowColor = "#D9A53A"
+orangeColor = "#E0703A"
+redColor = "#EF6A5A"
+violetColor = "#A58BF0"
+grayColor = "#948B80"
 chartCategoricalColors = [
-    "#12A08F",
-    "#E5641A",
-    "#6E6AE8",
-    "#D9529F",
-    "#2F8FE8",
-    "#BC8000",
-    "#9A6BE0",
-    "#E5534B",
+    "#E0703A",
+    "#1E9E93",
+    "#7B76EE",
+    "#C08A1C",
+    "#E0558F",
+    "#3A9BDA",
+    "#6A9E2E",
+    "#9273E6",
 ]
 chartSequentialColors = [
-    "#10292A",
-    "#123536",
-    "#144344",
-    "#165352",
-    "#186461",
-    "#1A7770",
-    "#1C8B80",
-    "#2BA394",
-    "#5BBFB1",
-    "#97DACF",
+    "#2A1A12",
+    "#3A2014",
+    "#4C2716",
+    "#612F18",
+    "#78391B",
+    "#91441F",
+    "#AD5226",
+    "#C9663A",
+    "#E08A5F",
+    "#F2B48F",
 ]
-dataframeBorderColor = "#243032"
-dataframeHeaderBackgroundColor = "#11171A"
-dataframeHeaderTextColor = "#A3B0AE"
+dataframeBorderColor = "#342E26"
+dataframeHeaderBackgroundColor = "#1B1814"
+dataframeHeaderTextColor = "#B3A99B"
 
 [theme.light.sidebar]
-backgroundColor = "#F8FAF9"
-secondaryBackgroundColor = "#EEF3F2"
-codeBackgroundColor = "#EEF3F2"
-textColor = "#0F1A19"
-borderColor = "#E1E8E6"
-primaryColor = "#007A6D"
-linkColor = "#007A6D"
+backgroundColor = "#F4EFE6"
+secondaryBackgroundColor = "#EAE3D6"
+codeBackgroundColor = "#EAE3D6"
+textColor = "#1F1A14"
+borderColor = "#E0D7C7"
+primaryColor = "#C2410C"
+linkColor = "#B23C0B"
 
 [theme.dark.sidebar]
-backgroundColor = "#0E1416"
-secondaryBackgroundColor = "#182022"
-codeBackgroundColor = "#182022"
-textColor = "#E6EDEC"
-borderColor = "#243032"
-primaryColor = "#0A8275"
-linkColor = "#5FD3C3"
+backgroundColor = "#1A1713"
+secondaryBackgroundColor = "#26211B"
+codeBackgroundColor = "#26211B"
+textColor = "#EEE8DE"
+borderColor = "#342E26"
+primaryColor = "#C8501E"
+linkColor = "#F0956A"
+
+[global]
+# The lever reset and scenario load callbacks assign the levers' keys, the
+# documented way to change widgets that are bound to the URL. Streamlit still
+# logs a "default value but also set via the Session State API" warning with a
+# stack trace for that, so it is turned off here.
+disableWidgetStateDuplicationWarning = true

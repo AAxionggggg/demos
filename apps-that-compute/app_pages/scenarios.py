@@ -18,8 +18,10 @@ def handle_action() -> None:
     click = st.session_state.scenario_action
     name, saved = scenarios[click.row]
     if click.label == LOAD:
+        # The levers are shared by every page, so the loaded scenario shows up
+        # here as "Current" and on the other pages.
         ui.apply_levers(saved)
-        st.switch_page("app_pages/forecast.py")
+        st.toast(f"Loaded **{name}** into the levers", icon=":material/upload:")
     else:
         del scenarios[click.row]
         st.toast(f"Deleted **{name}**", icon=":material/delete:")

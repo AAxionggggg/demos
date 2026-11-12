@@ -18,6 +18,8 @@ Demonstrates:
 - Guardrails edited in place with a live preview of their effect on the queue
 - Filters bound to the URL with ``bind="query-params"``, live search, and an
   audit log with CSV export
+- An ops-console light/dark theme (IBM Plex, cool slate neutrals, tight
+  corners) with a CVD-checked chart palette
 
 All data is synthetic, and every session gets its own database seeded with
 today's agent run. Replace ``utils/seed.py`` with your agent's output and

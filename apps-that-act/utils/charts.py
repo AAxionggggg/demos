@@ -24,29 +24,30 @@ class Palette:
 
 
 _LIGHT = Palette(
-    primary="#008A7B",
-    secondary="#5B5BD6",
-    warning="#E8590C",
-    muted="#A3ADAB",
-    text="#3E4A48",
+    primary="#2563EB",
+    secondary="#9333EA",
+    warning="#D97706",
+    muted="#94A3B8",
+    text="#334155",
     background="#FFFFFF",
-    band="#DDF0EC",
+    band="#E5ECFD",
 )
 _DARK = Palette(
-    primary="#12A08F",
-    secondary="#6E6AE8",
-    warning="#E5641A",
-    muted="#5E6A68",
-    text="#C5D1CF",
-    background="#0B1012",
-    band="#11292A",
+    primary="#4C82F7",
+    secondary="#9467EA",
+    warning="#F59E0B",
+    muted="#475569",
+    text="#C3CCDA",
+    background="#0A0F1C",
+    band="#162443",
 )
-# Decision outcomes keep the same color on every chart and badge.
+# Decision outcomes are statuses, and they keep the same color on every chart
+# and badge (see ui.ACTION_BADGES): approved green, edited blue, rejected amber.
 ACTION_COLORS = {
-    "Approved": ("#008A7B", "#12A08F"),
-    "Approved with changes": ("#5B5BD6", "#6E6AE8"),
-    "Rejected": ("#E8590C", "#E5641A"),
-    "Held": ("#A3ADAB", "#5E6A68"),
+    "Approved": ("#15803D", "#2FA36B"),
+    "Approved with changes": ("#2563EB", "#4C82F7"),
+    "Rejected": ("#D97706", "#E39A2D"),
+    "Held": ("#94A3B8", "#475569"),
 }
 
 
@@ -98,7 +99,7 @@ def stock_projection(proposal: pd.Series, order_qty: int) -> dict[str, Any]:
         )
     return {
         "dataset": {"source": data},
-        "legend": {"top": 0, "right": 0, "icon": "roundRect"},
+        "legend": {"top": 0, "right": 6, "icon": "roundRect", "itemGap": 16},
         "grid": {"left": 8, "right": 16, "top": 36, "bottom": 8, "containLabel": True},
         "tooltip": {"trigger": "axis", "valueFormatter": "%,d units"},
         "xAxis": {"type": "time", "splitLine": {"show": False}},
@@ -155,7 +156,7 @@ def demand(proposal: pd.Series) -> dict[str, Any]:
     )
     return {
         "dataset": {"source": data},
-        "legend": {"top": 0, "right": 0, "icon": "roundRect"},
+        "legend": {"top": 0, "right": 6, "icon": "roundRect", "itemGap": 16},
         "grid": {"left": 8, "right": 16, "top": 36, "bottom": 8, "containLabel": True},
         "tooltip": {"trigger": "axis", "valueFormatter": "%,d units"},
         "xAxis": {"type": "category", "axisTick": {"show": False}},
@@ -193,7 +194,7 @@ def decisions_per_day(decisions: pd.DataFrame) -> dict[str, Any]:
     )
     return {
         "dataset": {"source": counts},
-        "legend": {"top": 0, "right": 0, "icon": "roundRect"},
+        "legend": {"top": 0, "right": 6, "icon": "roundRect", "itemGap": 16},
         "grid": {"left": 8, "right": 16, "top": 36, "bottom": 8, "containLabel": True},
         "tooltip": {"trigger": "axis", "valueFormatter": "%d proposals"},
         "xAxis": {"type": "time", "splitLine": {"show": False}},

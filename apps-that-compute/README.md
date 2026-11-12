@@ -29,7 +29,7 @@ query and fit the `Product` parameters from your data.
 | KPI cards with trends and deltas vs. plan | `st.metric(chart_data=..., delta_description=...)` |
 | Row actions in a table | `st.column_config.ButtonColumn` |
 | Save dialog, export | `@st.dialog`, `st.form`, `st.download_button` |
-| Brand theme, light and dark | `.streamlit/config.toml` (CVD-checked chart palette) |
+| A warm editorial theme: serif headings, paper tones, pill buttons, light and dark | `.streamlit/config.toml` (Fraunces and Instrument Sans, CVD-checked chart palette) |
 | Headless tests | `streamlit.testing.v1.AppTest` in `tests/` |
 
 The simulation uses common random numbers: every scenario of a product line
