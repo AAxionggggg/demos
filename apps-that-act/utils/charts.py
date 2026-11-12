@@ -1,8 +1,13 @@
-"""ECharts options for Cairn Reorder desk."""
+"""ECharts options for Cairn Reorder desk.
+
+The theme in ``.streamlit/config.toml`` colors the charts: series take the
+``chartCategoricalColors`` palette in order. Decision outcomes are statuses,
+so they use the theme's semantic colors instead, the same ones as their
+badges in the tables (``ui.ACTION_BADGES``).
+"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Any
 
@@ -11,58 +16,24 @@ import pandas as pd
 
 import streamlit as st
 
-
-@dataclass(frozen=True)
-class Palette:
-    primary: str
-    secondary: str
-    warning: str
-    muted: str
-    text: str
-    background: str
-    band: str
-
-
-_LIGHT = Palette(
-    primary="#2563EB",
-    secondary="#9333EA",
-    warning="#D97706",
-    muted="#94A3B8",
-    text="#334155",
-    background="#FFFFFF",
-    band="#E5ECFD",
-)
-_DARK = Palette(
-    primary="#4C82F7",
-    secondary="#9467EA",
-    warning="#F59E0B",
-    muted="#475569",
-    text="#C3CCDA",
-    background="#0A0F1C",
-    band="#162443",
-)
-# Decision outcomes are statuses, and they keep the same color on every chart
-# and badge (see ui.ACTION_BADGES): approved green, edited blue, rejected amber.
+LEGEND = {"top": 0, "right": 6, "icon": "roundRect", "itemGap": 16}
+# The theme color option of each decision outcome.
 ACTION_COLORS = {
-    "Approved": ("#15803D", "#2FA36B"),
-    "Approved with changes": ("#2563EB", "#4C82F7"),
-    "Rejected": ("#D97706", "#E39A2D"),
-    "Held": ("#94A3B8", "#475569"),
+    "Approved": "greenColor",
+    "Approved with changes": "blueColor",
+    "Rejected": "orangeColor",
+    "Held": "grayColor",
 }
 
 
-def palette() -> Palette:
-    return _DARK if st.context.theme.type == "dark" else _LIGHT
-
-
-def _action_color(action: str) -> str:
-    light, dark = ACTION_COLORS[action]
-    return dark if st.context.theme.type == "dark" else light
+def theme(option: str) -> Any:
+    """A color option of the active light or dark theme, such as ``"grayColor"``."""
+    mode = "dark" if st.context.theme.type == "dark" else "light"
+    return st.get_option(f"theme.{mode}.{option}")
 
 
 def stock_projection(proposal: pd.Series, order_qty: int) -> dict[str, Any]:
     """Projected stock for eight weeks, with and without the proposed order."""
-    colors = palette()
     days = np.arange(57)
     daily = proposal["weekly_forecast"] / 7
     open_order_day = 5  # Open orders are already in transit
@@ -77,29 +48,28 @@ def stock_projection(proposal: pd.Series, order_qty: int) -> dict[str, Any]:
     data = pd.DataFrame(
         {
             "day": dates,
-            "Without the order": np.maximum(without, 0).round(),
             "With the order": np.maximum(with_order, 0).round(),
+            "Without the order": np.maximum(without, 0).round(),
             "Safety stock": round(proposal["weekly_forecast"]),
         }
     )
-    stockout = np.flatnonzero(without <= 0)
     marks: list[dict[str, Any]] = [
         {
             "name": "Arrives",
             "xAxis": (date.today() + timedelta(days=arrival_day)).isoformat(),
         }
     ]
+    stockout = np.flatnonzero(without <= 0)
     if stockout.size:
         marks.append(
             {
                 "name": "Stockout",
                 "xAxis": (date.today() + timedelta(days=int(stockout[0]))).isoformat(),
-                "lineStyle": {"color": colors.warning},
             }
         )
     return {
         "dataset": {"source": data},
-        "legend": {"top": 0, "right": 6, "icon": "roundRect", "itemGap": 16},
+        "legend": LEGEND,
         "grid": {"left": 8, "right": 16, "top": 36, "bottom": 8, "containLabel": True},
         "tooltip": {"trigger": "axis", "valueFormatter": "%,d units"},
         "xAxis": {"type": "time", "splitLine": {"show": False}},
@@ -110,13 +80,12 @@ def stock_projection(proposal: pd.Series, order_qty: int) -> dict[str, Any]:
                 "name": "With the order",
                 "encode": {"x": "day", "y": "With the order"},
                 "showSymbol": False,
-                "lineStyle": {"width": 2.5, "color": colors.primary},
-                "itemStyle": {"color": colors.primary},
-                "areaStyle": {"color": colors.band, "opacity": 0.9},
+                "lineStyle": {"width": 2.5},
+                "areaStyle": {"opacity": 0.12},
                 "markLine": {
                     "silent": True,
                     "symbol": "none",
-                    "lineStyle": {"type": "dashed", "color": colors.text},
+                    "lineStyle": {"type": "dashed", "color": theme("grayColor")},
                     "label": {"formatter": "{b}", "position": "insideEndTop"},
                     "data": marks,
                 },
@@ -126,16 +95,14 @@ def stock_projection(proposal: pd.Series, order_qty: int) -> dict[str, Any]:
                 "name": "Without the order",
                 "encode": {"x": "day", "y": "Without the order"},
                 "showSymbol": False,
-                "lineStyle": {"width": 2, "type": "dashed", "color": colors.warning},
-                "itemStyle": {"color": colors.warning},
+                "lineStyle": {"width": 2, "type": "dashed"},
             },
             {
                 "type": "line",
                 "name": "Safety stock",
                 "encode": {"x": "day", "y": "Safety stock"},
                 "showSymbol": False,
-                "lineStyle": {"width": 1.5, "type": "dotted", "color": colors.muted},
-                "itemStyle": {"color": colors.muted},
+                "lineStyle": {"width": 1.5, "type": "dotted"},
             },
         ],
     }
@@ -143,7 +110,6 @@ def stock_projection(proposal: pd.Series, order_qty: int) -> dict[str, Any]:
 
 def demand(proposal: pd.Series) -> dict[str, Any]:
     """Twelve weeks of units sold and the agent's six-week forecast."""
-    colors = palette()
     history, forecast = proposal["history"], proposal["forecast"]
     start = pd.Timestamp(date.today()) - pd.Timedelta(weeks=len(history))
     weeks = pd.date_range(start, periods=len(history) + len(forecast), freq="7D")
@@ -156,7 +122,7 @@ def demand(proposal: pd.Series) -> dict[str, Any]:
     )
     return {
         "dataset": {"source": data},
-        "legend": {"top": 0, "right": 6, "icon": "roundRect", "itemGap": 16},
+        "legend": LEGEND,
         "grid": {"left": 8, "right": 16, "top": 36, "bottom": 8, "containLabel": True},
         "tooltip": {"trigger": "axis", "valueFormatter": "%,d units"},
         "xAxis": {"type": "category", "axisTick": {"show": False}},
@@ -166,7 +132,8 @@ def demand(proposal: pd.Series) -> dict[str, Any]:
                 "type": "bar",
                 "name": "Sold",
                 "encode": {"x": "week", "y": "Sold"},
-                "itemStyle": {"color": colors.muted},
+                # Past sales stay neutral so the forecast stands out.
+                "itemStyle": {"color": theme("grayColor"), "opacity": 0.55},
                 "barCategoryGap": "30%",
             },
             {
@@ -174,8 +141,7 @@ def demand(proposal: pd.Series) -> dict[str, Any]:
                 "name": "Forecast",
                 "encode": {"x": "week", "y": "Forecast"},
                 "symbolSize": 6,
-                "lineStyle": {"width": 2.5, "type": "dashed", "color": colors.primary},
-                "itemStyle": {"color": colors.primary},
+                "lineStyle": {"width": 2.5, "type": "dashed"},
             },
         ],
     }
@@ -194,7 +160,7 @@ def decisions_per_day(decisions: pd.DataFrame) -> dict[str, Any]:
     )
     return {
         "dataset": {"source": counts},
-        "legend": {"top": 0, "right": 6, "icon": "roundRect", "itemGap": 16},
+        "legend": LEGEND,
         "grid": {"left": 8, "right": 16, "top": 36, "bottom": 8, "containLabel": True},
         "tooltip": {"trigger": "axis", "valueFormatter": "%d proposals"},
         "xAxis": {"type": "time", "splitLine": {"show": False}},
@@ -205,17 +171,16 @@ def decisions_per_day(decisions: pd.DataFrame) -> dict[str, Any]:
                 "name": action,
                 "stack": "decisions",
                 "encode": {"x": "day", "y": action},
-                "itemStyle": {"color": _action_color(action)},
+                "itemStyle": {"color": theme(color)},
                 "barMaxWidth": 18,
             }
-            for action in ACTION_COLORS
+            for action, color in ACTION_COLORS.items()
         ],
     }
 
 
 def acceptance_by_category(decisions: pd.DataFrame) -> dict[str, Any]:
     """Share of each category's proposals approved unchanged."""
-    colors = palette()
     shares = (
         decisions.assign(accepted=decisions["action"] == "Approved")
         .groupby("category")["accepted"]
@@ -235,7 +200,6 @@ def acceptance_by_category(decisions: pd.DataFrame) -> dict[str, Any]:
             {
                 "type": "bar",
                 "encode": {"x": "accepted", "y": "category"},
-                "itemStyle": {"color": colors.primary},
                 "barMaxWidth": 22,
                 "label": {
                     "show": True,

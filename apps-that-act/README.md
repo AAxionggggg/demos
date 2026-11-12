@@ -39,7 +39,7 @@ decided is skipped, so two planners can't decide it twice.
 | A side drawer with a decision form | `@st.dialog(position="right")` + `st.form` |
 | Filters in the URL, live search | `bind="query-params"`, `st.text_input(live=True)` |
 | Charts | `st.echarts_chart` |
-| An ops-console theme: IBM Plex, cool slate neutrals, tight corners, light and dark | `.streamlit/config.toml` (CVD-checked chart palette) |
+| A teal brand theme with Plus Jakarta Sans, light and dark; charts take their colors from it | `.streamlit/config.toml` (CVD-checked chart palette) |
 | Headless tests | `streamlit.testing.v1.AppTest` in `tests/` |
 
 ## Run it

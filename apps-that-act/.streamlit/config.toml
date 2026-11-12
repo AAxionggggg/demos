@@ -1,107 +1,129 @@
-# "Cairn Ops" theme: a crisp operations console with cool slate neutrals, IBM
-# Plex type, tight corners, and an electric-blue accent, in light and dark.
-# Categorical palettes were checked with a CVD validator in both modes
-# (adjacent pairs; the first three slots also pass all-pairs for scatter charts).
+# "Cairn" theme: dual light/dark with compact dashboard spacing, adapted from
+# the skill's bi-dashboard template. Categorical palettes were checked with a
+# CVD validator in both modes (adjacent pairs; the first three slots also pass
+# all-pairs for scatter charts).
 
 [theme]
-font = "'IBM Plex Sans':https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
-headingFont = "'IBM Plex Sans':https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
-codeFont = "'IBM Plex Mono':https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+font = "'Plus Jakarta Sans':https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200..800&display=swap"
+headingFont = "'Plus Jakarta Sans':https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200..800&display=swap"
+codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100..800&display=swap"
 baseFontSize = 14
 baseFontWeight = 400
 codeFontSize = "13px"
-headingFontSizes = ["26px", "20px", "16px", "15px", "14px", "12px"]
-headingFontWeights = [600, 600, 600, 600, 600, 600]
-metricValueFontSize = "1.7rem"
-metricValueFontWeight = 600
-baseRadius = "small"
-buttonRadius = "small"
+headingFontSizes = ["28px", "20px", "16px", "15px", "14px", "12px"]
+headingFontWeights = [700, 650, 650, 600, 600, 600]
+metricValueFontSize = "1.75rem"
+metricValueFontWeight = 700
+baseRadius = "0.75rem"
+buttonRadius = "0.6rem"
 showWidgetBorder = true
 showSidebarBorder = true
 linkUnderline = false
 paddingTop = "1rem"
 paddingBottom = "3rem"
 
+[theme.sidebar]
+paddingTop = "1rem"
+paddingBottom = "1.5rem"
+
 [theme.light]
-primaryColor = "#2563EB"
+primaryColor = "#007A6D"
 backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F3F5F9"
-codeBackgroundColor = "#F3F5F9"
-textColor = "#0B1220"
-linkColor = "#1D4ED8"
-borderColor = "#E2E7EF"
-codeTextColor = "#334155"
-blueColor = "#2563EB"
-greenColor = "#15803D"
+secondaryBackgroundColor = "#F2F6F5"
+codeBackgroundColor = "#F2F6F5"
+textColor = "#0F1A19"
+linkColor = "#007A6D"
+borderColor = "#E1E8E6"
+codeTextColor = "#33403E"
+blueColor = "#0B84E5"
+greenColor = "#16A34A"
 yellowColor = "#CA8A04"
-orangeColor = "#D97706"
+orangeColor = "#EA580C"
 redColor = "#DC2626"
-violetColor = "#7C3AED"
-grayColor = "#64748B"
+violetColor = "#7C5BD6"
+grayColor = "#6B7472"
 chartCategoricalColors = [
-    "#2563EB",
-    "#D97706",
-    "#0D9488",
-    "#9333EA",
-    "#DC2626",
-    "#0284C7",
-    "#DB2777",
-    "#65A30D",
+    "#008A7B",
+    "#E8590C",
+    "#5B5BD6",
+    "#D6409F",
+    "#0B84E5",
+    "#B87A00",
+    "#8E4EC6",
+    "#E5484D",
 ]
 chartSequentialColors = [
-    "#EFF4FF",
-    "#DBE6FE",
-    "#BFD3FE",
-    "#93B4FD",
-    "#6090FA",
-    "#3B71F3",
-    "#2563EB",
-    "#1D4ED8",
-    "#1E40AF",
-    "#1E3A8A",
+    "#EAF6F3",
+    "#CDEBE5",
+    "#A6DCD2",
+    "#7BC9BC",
+    "#4FB3A4",
+    "#239C8C",
+    "#008A7B",
+    "#00726A",
+    "#005B55",
+    "#004441",
 ]
-dataframeBorderColor = "#E2E7EF"
-dataframeHeaderBackgroundColor = "#F7F9FC"
-dataframeHeaderTextColor = "#475569"
+dataframeBorderColor = "#E1E8E6"
+dataframeHeaderBackgroundColor = "#F6F9F8"
+dataframeHeaderTextColor = "#56625F"
 
 [theme.dark]
-primaryColor = "#3B6FEF"
-backgroundColor = "#0A0F1C"
-secondaryBackgroundColor = "#131A2A"
-codeBackgroundColor = "#131A2A"
-textColor = "#E5EAF3"
-linkColor = "#7FA7FF"
-borderColor = "#222B3D"
-codeTextColor = "#C3CCDA"
-blueColor = "#4C82F7"
-greenColor = "#34C77B"
-yellowColor = "#EAB308"
-orangeColor = "#F59E0B"
-redColor = "#F06060"
+primaryColor = "#0A8275"
+backgroundColor = "#0B1012"
+secondaryBackgroundColor = "#151C1E"
+codeBackgroundColor = "#151C1E"
+textColor = "#E6EDEC"
+linkColor = "#5FD3C3"
+borderColor = "#243032"
+codeTextColor = "#C5D1CF"
+blueColor = "#3B9BFF"
+greenColor = "#34D399"
+yellowColor = "#FACC15"
+orangeColor = "#FB923C"
+redColor = "#F87171"
 violetColor = "#A78BFA"
-grayColor = "#8492A6"
+grayColor = "#8C9896"
 chartCategoricalColors = [
-    "#4C82F7",
-    "#BC7E1A",
-    "#179A8C",
-    "#9467EA",
-    "#E5534B",
-    "#2B8FD0",
+    "#12A08F",
+    "#E5641A",
+    "#6E6AE8",
     "#D9529F",
-    "#6CA332",
+    "#2F8FE8",
+    "#BC8000",
+    "#9A6BE0",
+    "#E5534B",
 ]
 chartSequentialColors = [
-    "#111A30",
-    "#152140",
-    "#1A2A52",
-    "#1F3466",
-    "#25407C",
-    "#2C4D94",
-    "#355CAE",
-    "#4A73CC",
-    "#6F93E6",
-    "#A5BDF5",
+    "#10292A",
+    "#123536",
+    "#144344",
+    "#165352",
+    "#186461",
+    "#1A7770",
+    "#1C8B80",
+    "#2BA394",
+    "#5BBFB1",
+    "#97DACF",
 ]
-dataframeBorderColor = "#222B3D"
-dataframeHeaderBackgroundColor = "#0F1524"
-dataframeHeaderTextColor = "#A3AFC2"
+dataframeBorderColor = "#243032"
+dataframeHeaderBackgroundColor = "#11171A"
+dataframeHeaderTextColor = "#A3B0AE"
+
+[theme.light.sidebar]
+backgroundColor = "#F8FAF9"
+secondaryBackgroundColor = "#EEF3F2"
+codeBackgroundColor = "#EEF3F2"
+textColor = "#0F1A19"
+borderColor = "#E1E8E6"
+primaryColor = "#007A6D"
+linkColor = "#007A6D"
+
+[theme.dark.sidebar]
+backgroundColor = "#0E1416"
+secondaryBackgroundColor = "#182022"
+codeBackgroundColor = "#182022"
+textColor = "#E6EDEC"
+borderColor = "#243032"
+primaryColor = "#0A8275"
+linkColor = "#5FD3C3"
