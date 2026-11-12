@@ -86,15 +86,24 @@ _PLAN_DEAL_RANGE = {
 # Hour offset of each region's business day relative to UTC, used to shift
 # the product usage pattern so the region filter changes the heatmap.
 _REGION_UTC_OFFSET = {"North America": -6, "EMEA": 1, "APAC": 8, "LATAM": -3}
+# Product and pricing milestones that time-series charts can annotate, as the
+# number of months before the current month.
+_MILESTONES = [
+    (19, "Pro price change"),
+    (13, "EMEA launch"),
+    (7, "AI copilot GA"),
+    (2, "Usage billing"),
+]
 
 
 @dataclass(frozen=True)
 class Filters:
-    """Global filters set in the sidebar of the entrypoint."""
+    """Global filters set in the toolbar of the entrypoint."""
 
     period: str
     regions: tuple[str, ...]
     plans: tuple[str, ...]
+    annotations: bool
 
     @property
     def months(self) -> int:
@@ -111,17 +120,28 @@ class Filters:
 
 
 def current_filters() -> Filters:
-    """Read the global sidebar filters from Session State."""
+    """Read the global toolbar filters from Session State."""
     period = st.session_state.get("period") or DEFAULT_PERIOD
     regions = tuple(st.session_state.get("regions") or REGIONS)
     plans = tuple(st.session_state.get("plans") or PLANS)
-    return Filters(period=period, regions=regions, plans=plans)
+    annotations = st.session_state.get("annotations", False)
+    return Filters(period=period, regions=regions, plans=plans, annotations=annotations)
 
 
 def month_index() -> pd.DatetimeIndex:
     """Return the first day of each month in the generated history."""
     this_month = pd.Timestamp(date.today()).to_period("M").to_timestamp()
     return pd.date_range(end=this_month, periods=N_MONTHS, freq="MS")
+
+
+def milestones(filters: Filters) -> list[tuple[pd.Timestamp, str]]:
+    """Return the milestones inside the selected period, if annotations are on."""
+    if not filters.annotations:
+        return []
+    months = month_index()
+    return [
+        (months[-1 - ago], label) for ago, label in _MILESTONES if ago < filters.months
+    ]
 
 
 # =============================================================================
@@ -244,7 +264,7 @@ def _generate_book(n_accounts: int = 260) -> tuple[pd.DataFrame, pd.DataFrame]:
     return accounts, history
 
 
-def _generate_deals(n_deals: int = 520) -> pd.DataFrame:
+def _generate_deals(n_deals: int = 900) -> pd.DataFrame:
     """Generate sales opportunities created over the past two years."""
     rng = np.random.default_rng(11)
     today = pd.Timestamp(date.today())
@@ -252,7 +272,9 @@ def _generate_deals(n_deals: int = 520) -> pd.DataFrame:
     plan = rng.choice(PLANS, n_deals, p=[0.18, 0.4, 0.42])
     low = np.array([_PLAN_DEAL_RANGE[p][0] for p in plan])
     high = np.array([_PLAN_DEAL_RANGE[p][1] for p in plan])
-    age_days = (rng.beta(1.0, 2.6, n_deals) * 540 + 3).astype(int)
+    # Spread creation dates over the 24-month window, slightly favoring recent
+    # deals, so every month has closed deals.
+    age_days = (rng.beta(1.1, 1.4, n_deals) * 760 + 3).astype(int)
     cycle_days = rng.integers(30, 180, n_deals)
     source = rng.choice(SOURCES, n_deals, p=[0.38, 0.27, 0.2, 0.15])
 
@@ -313,21 +335,23 @@ def _generate_usage() -> pd.DataFrame:
 # =============================================================================
 
 
-@st.cache_data(ttl="1h", show_spinner=False)
+# Every loader is called inside an ``st.skeleton`` block, so its spinner text
+# labels the skeleton during a slow load instead of drawing a second indicator.
+@st.cache_data(ttl="1h", show_spinner="Loading the customer book...")
 def load_book() -> tuple[pd.DataFrame, pd.DataFrame]:
     """Load customer accounts and their monthly MRR history."""
     time.sleep(SIMULATED_LATENCY_S)
     return _generate_book()
 
 
-@st.cache_data(ttl="15m", show_spinner=False)
+@st.cache_data(ttl="15m", show_spinner="Loading deals...")
 def load_deals() -> pd.DataFrame:
     """Load sales opportunities."""
     time.sleep(SIMULATED_LATENCY_S)
     return _generate_deals()
 
 
-@st.cache_data(ttl="1h", show_spinner=False)
+@st.cache_data(ttl="1h", show_spinner="Loading product usage...")
 def load_usage() -> pd.DataFrame:
     """Load product usage sessions by region, weekday, and hour."""
     time.sleep(SIMULATED_LATENCY_S)
@@ -378,12 +402,45 @@ def with_deal_metrics(deals: pd.DataFrame) -> pd.DataFrame:
 
 
 def mrr_by_plan(
-    history: pd.DataFrame, accounts: pd.DataFrame, months: int
+    history: pd.DataFrame, accounts: pd.DataFrame, months: int, *, years_back: int = 0
 ) -> pd.DataFrame:
-    """Return total MRR per month (rows) and plan (columns)."""
-    window = history.loc[accounts.index].iloc[:, -months:]
-    totals = window.groupby(accounts["plan"]).sum().T
+    """Return total MRR per month (rows) and plan (columns).
+
+    With ``years_back``, the values come from the same months that many years
+    earlier but keep the current window's month index, so they line up with it.
+    """
+    end = history.shape[1] - 12 * years_back
+    window = history.loc[accounts.index].iloc[:, end - months : end]
+    totals = (
+        window.groupby(accounts["plan"]).sum().T.set_axis(history.columns[-months:])
+    )
     return totals.reindex(columns=PLANS, fill_value=0)
+
+
+def mrr_forecast(monthly: pd.DataFrame, horizon: int = 3) -> pd.DataFrame:
+    """Extend each plan's MRR by its average monthly growth over the last six months."""
+    recent = monthly.iloc[-7:]
+    steps = len(recent) - 1
+    growth = (recent.iloc[-1] / recent.iloc[0].replace(0, np.nan)) ** (1 / steps)
+    growth = growth.fillna(1.0)
+    future = pd.date_range(monthly.index[-1], periods=horizon + 1, freq="MS")[1:]
+    rows = [monthly.iloc[-1] * growth**step for step in range(1, horizon + 1)]
+    return pd.DataFrame(rows, index=future)
+
+
+def bookings_by_month(deals: pd.DataFrame, months: int) -> pd.DataFrame:
+    """Closed-won value per month, projecting the rest of the current month.
+
+    The projection extrapolates the current month's bookings from its pace so far.
+    """
+    won = deals[deals["stage"] == "Closed won"]
+    close_month = pd.to_datetime(won["close_date"]).dt.to_period("M").dt.to_timestamp()
+    index = month_index()[-months:]
+    totals = won["amount"].groupby(close_month).sum().reindex(index, fill_value=0.0)
+    today = pd.Timestamp(date.today())
+    projected = pd.Series(0.0, index=index)
+    projected.iloc[-1] = totals.iloc[-1] * (today.days_in_month / today.day - 1)
+    return pd.DataFrame({"won": totals, "projected": projected})
 
 
 def mrr_movements(

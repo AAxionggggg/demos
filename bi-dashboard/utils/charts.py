@@ -4,17 +4,27 @@ Every option leaves series colors to Streamlit's ECharts theme, which reads
 ``chartCategoricalColors`` / ``chartSequentialColors`` from
 ``.streamlit/config.toml``. Series always keep a fixed order, so a filter that
 removes a category hides its data instead of repainting the survivors.
+
+Charts read their data from a dataframe in ``dataset.source``, which Streamlit
+sends as Arrow and shows under **Show data** in the chart toolbar. A few keep
+inline ``series.data``: sankeys and gauges don't read datasets, the radar
+styles each of its two items differently, and the scatter sizes each bubble by
+seats. A dataset could only size bubbles through a ``visualMap``, and
+Streamlit's theme gives every ``visualMap`` the sequential palette, which
+would recolor the bubbles by size instead of by plan.
+
+Time-series charts draw milestone annotations and the forecast range on an
+extra, empty "Markers" series, so the dataset stays the chart's real data.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from utils.data import PLANS, PRODUCTS, SOURCES, STAGES, WEEKDAYS
+import pandas as pd
+
+from utils.data import PLANS, PRODUCTS, SOURCES, STAGES
 from utils.formatting import money
-
-if TYPE_CHECKING:
-    import pandas as pd
 
 _LEGEND_TOP = {
     "top": 0,
@@ -25,21 +35,92 @@ _LEGEND_TOP = {
 }
 _GRID = {"left": 4, "right": 12, "top": 36, "bottom": 4}
 _AXIS_TOOLTIP = {"trigger": "axis", "axisPointer": {"type": "line"}}
+# Annotation color: a neutral gray that reads on both the light and dark theme.
+_MARKER_GRAY = "#8E90A2"
+# Diagonal white stripes that mark projected (not yet booked) values.
+_HATCH = {
+    "color": "rgba(255, 255, 255, 0.55)",
+    "dashArrayX": [1, 0],
+    "dashArrayY": [3, 4],
+    "rotation": -0.785,
+}
 
 
-def _month_labels(index: pd.Index) -> list[str]:
-    return [timestamp.strftime("%b %y") for timestamp in index]
+def _month_labels(index: pd.Index) -> pd.Index:
+    return pd.DatetimeIndex(index).strftime("%b %y")
+
+
+def _markers(
+    milestones: list[tuple[pd.Timestamp, str]],
+    forecast: tuple[str, str] | None = None,
+) -> dict[str, Any]:
+    """An empty series that draws milestone lines and a shaded forecast range.
+
+    It has an explicit color, so it doesn't take a palette slot from the data series.
+    """
+    series: dict[str, Any] = {
+        "name": "Markers",
+        "type": "line",
+        "data": [],
+        "silent": True,
+        "itemStyle": {"color": _MARKER_GRAY},
+        "tooltip": {"show": False},
+    }
+    if milestones:
+        labels = _month_labels(pd.DatetimeIndex([month for month, _ in milestones]))
+        series["markLine"] = {
+            "silent": True,
+            "symbol": ["none", "none"],
+            "lineStyle": {"color": _MARKER_GRAY, "type": "dashed", "opacity": 0.8},
+            "label": {
+                "color": _MARKER_GRAY,
+                "position": "insideEndTop",
+                "fontSize": 11,
+                "formatter": "{b}",
+            },
+            "data": [
+                {"name": text, "xAxis": label}
+                for label, (_, text) in zip(labels, milestones, strict=True)
+            ],
+        }
+    if forecast:
+        series["markArea"] = {
+            "silent": True,
+            "itemStyle": {"color": "rgba(142, 144, 162, 0.14)"},
+            "label": {"color": _MARKER_GRAY, "position": "insideTop", "fontSize": 11},
+            "data": [
+                [{"name": "Forecast", "xAxis": forecast[0]}, {"xAxis": forecast[1]}]
+            ],
+        }
+    return series
 
 
 def mrr_growth(
-    monthly: pd.DataFrame, active_plans: tuple[str, ...], *, share: bool
+    monthly: pd.DataFrame,
+    active_plans: tuple[str, ...],
+    *,
+    share: bool,
+    forecast: pd.DataFrame | None = None,
+    year_earlier: pd.DataFrame | None = None,
+    milestones: list[tuple[pd.Timestamp, str]] | None = None,
 ) -> dict[str, Any]:
-    """Stacked area of MRR (in $K, or % share) per plan over time."""
-    values = monthly[list(active_plans)] if active_plans else monthly.iloc[:, :0]
+    """Stacked area of MRR (in $K, or % share) per plan over time.
+
+    ``forecast`` appends projected months under a shaded range, and
+    ``year_earlier`` adds the total MRR of the same months a year before as a
+    dashed line (in $K only).
+    """
+    combined = monthly if forecast is None else pd.concat([monthly, forecast])
+    values = combined[list(active_plans)] if active_plans else combined.iloc[:, :0]
     if share:
         values = values.div(values.sum(axis=1).replace(0, 1), axis=0) * 100
     else:
         values = values / 1_000
+    # A plan removed by the global filter keeps its column (and color slot)
+    # but has no values, so it draws nothing.
+    source = values.reindex(columns=PLANS).round(1).reset_index(drop=True)
+    labels = _month_labels(combined.index)
+    source.insert(0, "month", labels)
     series = [
         {
             "name": plan,
@@ -50,22 +131,41 @@ def mrr_growth(
             "lineStyle": {"width": 2},
             "areaStyle": {"opacity": 0.22},
             "emphasis": {"focus": "series"},
-            # A plan removed by the global filter keeps its series (and color
-            # slot) but draws nothing.
-            "data": values[plan].round(1).tolist()
-            if plan in values
-            else [None] * len(monthly),
+            "encode": {"x": "month", "y": plan},
         }
         for plan in PLANS
     ]
+    legend = list(PLANS)
+    if year_earlier is not None and not share:
+        total = year_earlier[list(active_plans)].sum(axis=1) / 1_000
+        # Forecast months have no year-earlier value, so they stay empty.
+        source["Year earlier"] = total.reindex(combined.index).round(1).to_numpy()
+        series.append(
+            {
+                "name": "Year earlier",
+                "type": "line",
+                "smooth": 0.35,
+                "showSymbol": False,
+                "lineStyle": {"width": 2, "type": "dashed"},
+                "encode": {"x": "month", "y": "Year earlier"},
+            }
+        )
+        legend.append("Year earlier")
+    forecast_range = (
+        (labels[len(monthly)], labels[-1]) if forecast is not None else None
+    )
+    series.append(_markers(milestones or [], forecast_range))
     return {
-        "tooltip": _AXIS_TOOLTIP,
-        "legend": _LEGEND_TOP,
+        "dataset": {"source": source},
+        "tooltip": {
+            **_AXIS_TOOLTIP,
+            "valueFormatter": "%.1f%%" if share else "$%,.1fK",
+        },
+        "legend": {**_LEGEND_TOP, "data": legend},
         "grid": _GRID,
         "xAxis": {
             "type": "category",
             "boundaryGap": False,
-            "data": _month_labels(monthly.index),
             "axisTick": {"show": False},
         },
         "yAxis": {
@@ -75,6 +175,48 @@ def mrr_growth(
             "splitLine": {"lineStyle": {"opacity": 0.6}},
         },
         "series": series,
+    }
+
+
+def bookings(
+    monthly: pd.DataFrame, milestones: list[tuple[pd.Timestamp, str]] | None = None
+) -> dict[str, Any]:
+    """Stacked bars of closed-won bookings in $K, with the current month's projection hatched."""
+    source = (
+        (monthly / 1_000)
+        .round(1)
+        .rename(columns={"won": "Closed won", "projected": "Projected"})
+        .reset_index(drop=True)
+    )
+    # Only the current month has a projection; empty values draw no bar.
+    source["Projected"] = source["Projected"].where(source["Projected"] > 0)
+    source.insert(0, "month", _month_labels(monthly.index))
+    bar = {"type": "bar", "stack": "bookings", "barWidth": "62%"}
+    return {
+        "dataset": {"source": source},
+        "tooltip": {
+            "trigger": "axis",
+            "axisPointer": {"type": "shadow"},
+            "valueFormatter": "$%,.0fK",
+        },
+        "legend": {**_LEGEND_TOP, "data": ["Closed won", "Projected"]},
+        "grid": _GRID,
+        "xAxis": {"type": "category", "axisTick": {"show": False}},
+        "yAxis": {
+            "type": "value",
+            "axisLabel": {"formatter": "${value}K"},
+            "splitLine": {"lineStyle": {"opacity": 0.6}},
+        },
+        "series": [
+            {**bar, "name": "Closed won", "encode": {"x": "month", "y": "Closed won"}},
+            {
+                **bar,
+                "name": "Projected",
+                "itemStyle": {"opacity": 0.7, "decal": _HATCH},
+                "encode": {"x": "month", "y": "Projected"},
+            },
+            _markers(milestones or []),
+        ],
     }
 
 
@@ -88,38 +230,51 @@ def mrr_bridge(movements: dict[str, float]) -> dict[str, Any]:
         ("Churn", -movements["churn"], "decrease"),
         ("End", movements["end"], "total"),
     ]
-    base: list[float] = []
-    columns: dict[str, list[dict[str, Any] | str]] = {"total": [], "increase": [], "decrease": []}
+    rows = []
     level = 0.0
     for name, value, kind in steps:
         if kind == "total":
             level = value
-            base.append(0)
+            base = 0.0
         elif kind == "increase":
-            base.append(round(level / 1_000, 1))
+            base = level
             level += value
         else:
             level += value
-            base.append(round(level / 1_000, 1))
-        # Labels and tooltips are precomputed strings because the chart spec
-        # can't carry JavaScript formatter callbacks.
-        bar = {
-            "value": round(abs(value) / 1_000, 1),
-            "label": {"formatter": money(value)},
-            "tooltip": {"formatter": f"{name}: {money(value)}"},
-        }
-        for column_kind, column in columns.items():
-            column.append(bar if column_kind == kind else "-")
+            base = level
+        height = round(abs(value) / 1_000, 1)
+        rows.append(
+            {
+                "step": name,
+                "Base": round(base / 1_000, 1),
+                # Each step fills only the column of its own kind.
+                "MRR": height if kind == "total" else None,
+                "Gain": height if kind == "increase" else None,
+                "Loss": height if kind == "decrease" else None,
+                # Precomputed because labels can't apply a number format.
+                "change": money(value),
+            }
+        )
 
-    bar_style = {"type": "bar", "stack": "bridge", "barWidth": "56%", "itemStyle": {"borderRadius": 4}}
-    label = {"show": True, "position": "top", "fontWeight": 500}
+    bar_style = {
+        "type": "bar",
+        "stack": "bridge",
+        "barWidth": "56%",
+        "itemStyle": {"borderRadius": 4},
+    }
+    label = {
+        "show": True,
+        "position": "top",
+        "fontWeight": 500,
+        "formatter": "{@change}",
+    }
     return {
+        "dataset": {"source": pd.DataFrame(rows)},
         "tooltip": {"trigger": "item"},
         "legend": {**_LEGEND_TOP, "data": ["MRR", "Gain", "Loss"]},
         "grid": {**_GRID, "top": 44},
         "xAxis": {
             "type": "category",
-            "data": [step[0] for step in steps],
             "axisTick": {"show": False},
             "axisLabel": {"interval": 0},
         },
@@ -134,11 +289,18 @@ def mrr_bridge(movements: dict[str, float]) -> dict[str, Any]:
                 "emphasis": {"disabled": True},
                 "tooltip": {"show": False},
                 "silent": True,
-                "data": base,
+                "encode": {"x": "step", "y": "Base"},
             },
-            {**bar_style, "name": "MRR", "label": label, "data": columns["total"]},
-            {**bar_style, "name": "Gain", "label": label, "data": columns["increase"]},
-            {**bar_style, "name": "Loss", "label": label, "data": columns["decrease"]},
+            *(
+                {
+                    **bar_style,
+                    "name": name,
+                    "label": label,
+                    "tooltip": {"formatter": "{b}: {@change}"},
+                    "encode": {"x": "step", "y": name},
+                }
+                for name in ("MRR", "Gain", "Loss")
+            ),
         ],
     }
 
@@ -149,8 +311,18 @@ def industry_mix(mrr_by_industry: pd.Series) -> dict[str, Any]:
     total_label = (
         f"${total_k / 1_000:.2f}M" if total_k >= 1_000 else f"${total_k:,.0f}K"
     )
+    source = (
+        (mrr_by_industry / 1_000)
+        .round(1)
+        .rename("mrr")
+        .rename_axis("industry")
+        .reset_index()
+    )
     return {
-        "tooltip": {"trigger": "item", "formatter": "{b}: ${c}K ({d}%)"},
+        "dataset": {"source": source},
+        # Pie tooltips leave named {@...} placeholders empty, so read the MRR
+        # column by position.
+        "tooltip": {"trigger": "item", "formatter": "{b}: ${@[1]}K ({d}%)"},
         "legend": {"bottom": 0, "icon": "circle", "itemWidth": 8, "itemHeight": 8},
         "title": {
             "text": total_label,
@@ -171,10 +343,7 @@ def industry_mix(mrr_by_industry: pd.Series) -> dict[str, Any]:
                 "selectedMode": "single",
                 "selectedOffset": 8,
                 "emphasis": {"scale": True, "scaleSize": 4},
-                "data": [
-                    {"name": name, "value": round(value / 1_000, 1)}
-                    for name, value in mrr_by_industry.items()
-                ],
+                "encode": {"itemName": "industry", "value": "mrr"},
             }
         ],
     }
@@ -182,35 +351,31 @@ def industry_mix(mrr_by_industry: pd.Series) -> dict[str, Any]:
 
 def usage_heatmap(matrix: pd.DataFrame) -> dict[str, Any]:
     """Weekday by hour heatmap of product sessions."""
-    values = matrix.to_numpy(dtype=int)
-    cells = [
-        {
-            "value": [hour, day_index, int(values[day_index, hour])],
-            "tooltip": {
-                "formatter": f"{day} {hour:02d}:00 UTC · {int(values[day_index, hour]):,} sessions"
-            },
-        }
-        for day_index, day in enumerate(WEEKDAYS)
-        for hour in range(24)
-    ]
+    # Category axes read numbers as positions, so the hours become labels.
+    source = (
+        matrix.set_axis([f"{hour:02d}:00" for hour in matrix.columns], axis=1)
+        .rename_axis("weekday")
+        .reset_index()
+        .melt(id_vars="weekday", var_name="hour", value_name="sessions")
+    )[["hour", "weekday", "sessions"]]
     return {
+        "dataset": {"source": source},
         "tooltip": {"position": "top"},
         "grid": {"left": 4, "right": 4, "top": 8, "bottom": 48},
         "xAxis": {
             "type": "category",
-            "data": [f"{hour:02d}:00" for hour in range(24)],
             "splitArea": {"show": False},
             "axisTick": {"show": False},
             "axisLine": {"show": False},
         },
         "yAxis": {
             "type": "category",
-            "data": WEEKDAYS,
             "inverse": True,
             "axisTick": {"show": False},
             "axisLine": {"show": False},
         },
         "visualMap": {
+            "dimension": "sessions",
             "min": 0,
             "max": int(matrix.to_numpy().max()) or 1,
             "orient": "horizontal",
@@ -225,7 +390,10 @@ def usage_heatmap(matrix: pd.DataFrame) -> dict[str, Any]:
             {
                 "name": "Sessions",
                 "type": "heatmap",
-                "data": cells,
+                "encode": {"x": "hour", "y": "weekday", "value": "sessions"},
+                "tooltip": {
+                    "formatter": "{@weekday} {@hour} UTC · {@sessions} sessions"
+                },
                 "itemStyle": {"borderRadius": 3},
                 "emphasis": {
                     "itemStyle": {"shadowBlur": 8, "shadowColor": "rgba(0, 0, 0, 0.25)"}
@@ -240,13 +408,15 @@ def account_mrr(history: pd.Series) -> dict[str, Any]:
     active = history[history > 0]
     if active.empty:
         active = history.tail(12)
+    source = active.round().rename("mrr").reset_index(drop=True).to_frame()
+    source.insert(0, "month", _month_labels(active.index))
     return {
-        "tooltip": _AXIS_TOOLTIP,
+        "dataset": {"source": source},
+        "tooltip": {**_AXIS_TOOLTIP, "valueFormatter": "$%,d"},
         "grid": {"left": 4, "right": 8, "top": 12, "bottom": 4},
         "xAxis": {
             "type": "category",
             "boundaryGap": False,
-            "data": _month_labels(active.index),
             "axisTick": {"show": False},
         },
         "yAxis": {
@@ -262,7 +432,7 @@ def account_mrr(history: pd.Series) -> dict[str, Any]:
                 "showSymbol": False,
                 "lineStyle": {"width": 2.5},
                 "areaStyle": {"opacity": 0.16},
-                "data": active.round().tolist(),
+                "encode": {"x": "month", "y": "mrr"},
             }
         ],
     }
@@ -316,10 +486,16 @@ def health_scatter(accounts: pd.DataFrame) -> dict[str, Any]:
                         "name": name,
                         "value": [int(health), float(mrr), int(seats)],
                         "symbolSize": max(8, min(28, 6 + seats**0.5)),
-                        "tooltip": {"formatter": f"{name} · Health {int(health)} · {money(mrr)} MRR"},
+                        "tooltip": {
+                            "formatter": f"{name} · Health {int(health)} · {money(mrr)} MRR"
+                        },
                     }
                     for name, health, mrr, seats in zip(
-                        subset["name"], subset["health"], subset["mrr"], subset["seats"], strict=True
+                        subset["name"],
+                        subset["health"],
+                        subset["mrr"],
+                        subset["seats"],
+                        strict=True,
                     )
                 ],
                 "itemStyle": {"opacity": 0.75},
@@ -360,7 +536,9 @@ def health_scatter(accounts: pd.DataFrame) -> dict[str, Any]:
         "yAxis": {
             "type": "log",
             "min": 100,
-            "max": max(1_000, float(accounts["mrr"].max()) * 1.5) if len(accounts) else 1_000,
+            "max": max(1_000, float(accounts["mrr"].max()) * 1.5)
+            if len(accounts)
+            else 1_000,
             "axisLabel": {"formatter": "${value}"},
             "splitLine": {"lineStyle": {"opacity": 0.6}},
         },
@@ -371,10 +549,15 @@ def health_scatter(accounts: pd.DataFrame) -> dict[str, Any]:
 def stage_funnel(deals: pd.DataFrame) -> dict[str, Any]:
     """Funnel of how many deals reached each stage, in a single hue."""
     order = STAGES[:5]
-    ranks = [_stage_rank(stage) for stage in deals["stage"].tolist()]
-    reached = [sum(r >= rank for r in ranks) for rank in range(len(order))]
+    ranks = deals["stage"].map(_stage_rank)
+    source = pd.DataFrame(
+        {"stage": order, "deals": [(ranks >= rank).sum() for rank in range(len(order))]}
+    )
     return {
-        "tooltip": {"trigger": "item", "formatter": "{b}: {c} deals"},
+        "dataset": {"source": source},
+        # Funnel tooltips leave named {@...} placeholders empty, so read the
+        # deals column by position.
+        "tooltip": {"trigger": "item", "formatter": "{b}: {@[1]} deals"},
         "series": [
             {
                 "name": "Deals",
@@ -393,16 +576,13 @@ def stage_funnel(deals: pd.DataFrame) -> dict[str, Any]:
                 "label": {
                     "show": True,
                     "position": "inside",
-                    "formatter": "{b}  ·  {c}",
+                    "formatter": "{b}  ·  {@deals}",
                     "color": "#FFFFFF",
                     "textBorderWidth": 0,
                     "fontWeight": 500,
                 },
                 "itemStyle": {"borderWidth": 0, "borderRadius": 6},
-                "data": [
-                    {"name": stage, "value": count}
-                    for stage, count in zip(order, reached, strict=True)
-                ],
+                "encode": {"itemName": "stage", "value": "deals"},
             }
         ],
     }
@@ -422,11 +602,18 @@ def pipeline_flow(deals: pd.DataFrame) -> dict[str, Any]:
         )
     )
     first = deals.groupby(["source", "plan"])["amount"].sum().reset_index()
-    second = deals.assign(outcome=outcome).groupby(["plan", "outcome"])["amount"].sum().reset_index()
+    second = (
+        deals.assign(outcome=outcome)
+        .groupby(["plan", "outcome"])["amount"]
+        .sum()
+        .reset_index()
+    )
     links = [
         {"source": src, "target": dst, "value": round(value / 1_000, 1)}
         for frame in (first, second)
-        for src, dst, value in zip(frame.iloc[:, 0], frame.iloc[:, 1], frame["amount"], strict=True)
+        for src, dst, value in zip(
+            frame.iloc[:, 0], frame.iloc[:, 1], frame["amount"], strict=True
+        )
         if value > 0
     ]
     nodes = [*SOURCES, *PLANS, "Won", "Open", "Lost"]
@@ -452,8 +639,9 @@ def pipeline_flow(deals: pd.DataFrame) -> dict[str, Any]:
     }
 
 
-def quota_gauge(attainment: float, pace: float) -> dict[str, Any]:
+def quota_gauge(bookings: float, quota: float, pace: float) -> dict[str, Any]:
     """Progress gauge of quarter-to-date bookings against quota."""
+    attainment = bookings / quota * 100
     return {
         "series": [
             {
@@ -480,7 +668,10 @@ def quota_gauge(attainment: float, pace: float) -> dict[str, Any]:
                     "formatter": "{value}%",
                 },
                 "data": [
-                    {"value": round(attainment), "name": f"of quota · pace {pace:.0f}%"}
+                    {
+                        "value": round(attainment),
+                        "name": f"{money(bookings)} of {money(quota)} · pace {pace:.0f}%",
+                    }
                 ],
             }
         ],
@@ -489,7 +680,11 @@ def quota_gauge(attainment: float, pace: float) -> dict[str, Any]:
 
 def pipeline_by_owner(totals: pd.Series) -> dict[str, Any]:
     """Selectable horizontal bars of open pipeline (in $K) per account executive."""
+    source = totals.rename("pipeline").rename_axis("owner").reset_index()
+    source["label"] = (source["pipeline"] * 1_000).map(money)
+    source["pipeline"] = source["pipeline"].round()
     return {
+        "dataset": {"source": source},
         "tooltip": {"trigger": "item"},
         "grid": {"left": 4, "right": 48, "top": 4, "bottom": 4},
         "xAxis": {
@@ -499,7 +694,6 @@ def pipeline_by_owner(totals: pd.Series) -> dict[str, Any]:
         },
         "yAxis": {
             "type": "category",
-            "data": totals.index.tolist(),
             "axisTick": {"show": False},
         },
         "series": [
@@ -516,15 +710,9 @@ def pipeline_by_owner(totals: pd.Series) -> dict[str, Any]:
                     }
                 },
                 "itemStyle": {"borderRadius": [0, 6, 6, 0]},
-                "label": {"show": True, "position": "right", "formatter": "${c}K"},
-                "data": [
-                    {
-                        "value": round(value),
-                        "label": {"formatter": money(value * 1_000)},
-                        "tooltip": {"formatter": f"{owner}: {money(value * 1_000)} open"},
-                    }
-                    for owner, value in totals.items()
-                ],
+                "label": {"show": True, "position": "right", "formatter": "{@label}"},
+                "tooltip": {"formatter": "{b}: {@label} open"},
+                "encode": {"x": "pipeline", "y": "owner"},
             }
         ],
     }

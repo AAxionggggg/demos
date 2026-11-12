@@ -1,21 +1,32 @@
 """Nimbus BI: a revenue intelligence dashboard for a fictional B2B SaaS company.
 
 Demonstrates:
-- Dual light/dark custom theme (``.streamlit/config.toml``) with validated
-  chart palettes, Geist fonts, and compact dashboard padding
-- ``st.navigation(position="top")`` with an ``app_pages/`` folder
-- Global sidebar filters bound to the URL with ``bind="query-params"``
-- ``st.echarts_chart`` for stacked areas, waterfalls, donuts, heatmaps,
-  funnels, sankeys, gauges, radars, and brushable scatter plots, including
+- Layout-first loading: every page paints its frames, titles, and controls
+  first, and ``st.skeleton`` holds each slow card at its final size. Cached
+  reruns update cards in place, and slow loads show their spinner text on the
+  skeleton. The overview loads its cards concurrently in
+  ``@st.fragment(parallel=True)`` fragments; the accounts and pipeline pages
+  cross-filter between cards, so they draw every skeleton first and fill
+  them once the shared data has loaded.
+- A toolbar of global filters bound to the URL with ``bind="query-params"``
+  (period, regions and plans in a popover, and chart annotations)
+- Certified-metric badges, section SQL popovers, and ``st.menu_button`` card
+  menus with definition drawers, SQL, feedback, and chart toggles
+- ``st.echarts_chart`` for stacked areas with a forecast and a year-earlier
+  comparison, milestone annotations, hatched projections, waterfalls, donuts,
+  heatmaps, funnels, sankeys, gauges, and brushable scatter plots, including
   selection-driven cross-filtering
 - ``st.dataframe`` with ``ButtonColumn`` row actions, ``MultiselectColumn``
   colored badges, and sparkline / progress columns
-- ``@st.dialog(position="right")`` side drawer for account drill-down
+- ``@st.dialog(position="right")`` side drawers for account and metric details
 - ``streamlit-pivot`` (a Components v2 package) in a large ``@st.dialog``
   for drag-and-drop pivoting and cell drill-down of the accounts and deals
   tables
-- ``@st.fragment(parallel=True)`` cards that load concurrently behind
-  ``st.skeleton`` placeholders
+- Dual light/dark custom theme (``.streamlit/config.toml``) with validated
+  chart palettes, Geist fonts, and compact dashboard padding
+
+The layout-first loading needs a Streamlit build with the ``st.skeleton``
+changes from streamlit/streamlit#17920 and #17924 (see ``requirements.txt``).
 
 All data is synthetic. Replace the generators in ``utils/data.py`` with your
 own queries.
@@ -61,10 +72,24 @@ def reset_filters() -> None:
     st.session_state.period = data.DEFAULT_PERIOD
     st.session_state.regions = []
     st.session_state.plans = []
+    st.session_state.annotations = False
 
 
-with st.sidebar:
-    st.subheader("Filters", icon=":material/tune:", anchor=False)
+# The entrypoint draws the page title and the global filters, so every page
+# shares them. The filter summary is filled in once the widgets have run.
+with st.container(horizontal=True, vertical_alignment="center"):
+    with st.container(gap=None):
+        st.title(page.title, icon=page.icon, anchor=False)
+        summary = st.empty()
+    st.button(
+        "Reset",
+        icon=":material/restart_alt:",
+        type="tertiary",
+        on_click=reset_filters,
+        help="Reset the period, filters, and annotations",
+    )
+
+with st.container(horizontal=True, vertical_alignment="center", gap="medium"):
     st.segmented_control(
         "Period",
         list(data.PERIODS),
@@ -72,34 +97,34 @@ with st.sidebar:
         required=True,
         key="period",
         bind="query-params",
-        width="stretch",
-        wrap=False,
+        label_visibility="collapsed",
     )
-    st.pills(
-        "Regions",
-        data.REGIONS,
-        selection_mode="multi",
-        key="regions",
-        help="Leave empty to include all regions.",
+    with st.popover("Filters", icon=":material/tune:"):
+        st.pills(
+            "Regions",
+            data.REGIONS,
+            selection_mode="multi",
+            key="regions",
+            help="Leave empty to include all regions.",
+            bind="query-params",
+        )
+        st.pills(
+            "Plans",
+            data.PLANS,
+            selection_mode="multi",
+            key="plans",
+            help="Leave empty to include all plans.",
+            bind="query-params",
+        )
+        st.caption("Filters are saved in the URL, so you can share the current view.")
+    st.toggle(
+        "Annotations",
+        value=False,
+        key="annotations",
         bind="query-params",
+        help="Mark product and pricing milestones on time-series charts.",
     )
-    st.pills(
-        "Plans",
-        data.PLANS,
-        selection_mode="multi",
-        key="plans",
-        help="Leave empty to include all plans.",
-        bind="query-params",
-    )
-    st.button(
-        "Reset filters",
-        icon=":material/restart_alt:",
-        type="tertiary",
-        on_click=reset_filters,
-    )
-    st.caption(
-        "Synthetic demo data, cached for one hour. Filters are saved in the URL, "
-        "so you can share the current view."
-    )
+
+summary.caption(data.current_filters().describe())
 
 page.run()

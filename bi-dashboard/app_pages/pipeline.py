@@ -1,14 +1,26 @@
+"""Pipeline: bookings, quota, pipeline shape, and a deals table to act on.
+
+The owner chart filters the deals table, and closing a deal changes every
+card, so the page shares one load instead of running independent fragments.
+It paints its layout first: it draws every card's frame, header, and skeleton,
+then loads the deals inside the KPI row's skeleton (whose spinner text labels
+it) and fills the other cards.
+"""
+
 from datetime import date
 
 import pandas as pd
 from streamlit_pivot import st_pivot_table
 from utils import charts, data
-from utils.components import STAGE_COLORS, card_header, page_header
-from utils.formatting import money, money_md
+from utils.components import STAGE_COLORS, card_header, card_menu, section_header
+from utils.formatting import money
 
 import streamlit as st
 
+# Each skeleton has the height of the content that replaces it.
+KPI_HEIGHT = 112
 CHART_HEIGHT = 300
+DEALS_HEIGHT = 380
 WON_ACTION = ":material/check_circle: Mark as won"
 LOST_ACTION = ":material/cancel: Mark as lost"
 PIVOT_FIELDS = {
@@ -28,7 +40,6 @@ PIVOT_FIELDS = {
 st.session_state.setdefault("deal_overrides", {})
 
 filters = data.current_filters()
-actions = page_header("Pipeline", ":material/filter_alt:", filters.describe())
 
 
 def handle_deal_action(table: pd.DataFrame) -> None:
@@ -82,6 +93,11 @@ def explore_deals(deals: pd.DataFrame) -> None:
     )
 
 
+actions = section_header(
+    "Pipeline health",
+    help="Sales opportunities from the CRM, refreshed every 15 minutes.",
+    sql="pipeline",
+)
 if st.session_state.deal_overrides:
     actions.button(
         f"Undo {len(st.session_state.deal_overrides)} changes",
@@ -90,118 +106,50 @@ if st.session_state.deal_overrides:
         on_click=reset_deals,
     )
 
-with st.skeleton(height=180):
-    deals = data.load_deals()
-deals = data.with_deal_metrics(
-    data.filter_deals(data.apply_deal_overrides(deals), filters)
-)
-open_deals = deals[deals["stage"].isin(data.OPEN_STAGES)]
-closed = deals[deals["stage"].isin(["Closed won", "Closed lost"])]
-won = closed[closed["stage"] == "Closed won"]
+# Layout first: draw every card's frame, header, and skeleton before loading.
+kpi_row = st.container()
 
-quarter_start = pd.Timestamp(date.today()).to_period("Q").start_time.date()
-quarter_end = pd.Timestamp(date.today()).to_period("Q").end_time.date()
-quarter_bookings = won.loc[won["close_date"] >= quarter_start, "amount"].sum()
-quarterly_quota = max(won["amount"].sum() / max(filters.months / 3, 1) * 1.15, 1)
-days_elapsed = (date.today() - quarter_start).days + 1
-quarter_days = (quarter_end - quarter_start).days + 1
-win_rate = len(won) / len(closed) if len(closed) else 0
-cycle = (
-    pd.to_datetime(won["close_date"]) - pd.to_datetime(won["created"])
-).dt.days.mean()
-
-with st.container(horizontal=True):
-    st.metric(
-        "Open pipeline",
-        money(open_deals["amount"].sum()),
-        f"{len(open_deals)} deals",
-        delta_color="off",
-        delta_arrow="off",
-        icon=":material/account_tree:",
-        border=True,
+bookings_col, quota_col = st.columns([3, 2])
+with bookings_col.container(border=True, height="stretch"):
+    controls = card_header(
+        "Bookings by month",
+        "Closed-won value. The current month is projected from its pace so far.",
+        certified=True,
     )
-    st.metric(
-        "Weighted forecast",
-        money(open_deals["weighted"].sum()),
-        f"{open_deals['weighted'].sum() / max(open_deals['amount'].sum(), 1):.0%} of pipeline",
-        delta_color="off",
-        delta_arrow="off",
-        icon=":material/query_stats:",
-        border=True,
-        help="Open deal value weighted by each stage's win probability.",
+    card_menu(controls, "bookings")
+    bookings_slot = st.skeleton(height=CHART_HEIGHT)
+with quota_col.container(border=True, height="stretch"):
+    controls = card_header(
+        "Quarter bookings",
+        "Closed-won value against this quarter's quota",
+        certified=True,
     )
-    st.metric(
-        "Win rate",
-        f"{win_rate:.0%}",
-        f"{len(won)} of {len(closed)} closed",
-        delta_color="off",
-        delta_arrow="off",
-        icon=":material/handshake:",
-        border=True,
-    )
-    st.metric(
-        "Avg. sales cycle",
-        f"{cycle:.0f} days" if pd.notna(cycle) else "–",
-        "created to closed won",
-        delta_color="off",
-        delta_arrow="off",
-        icon=":material/schedule:",
-        border=True,
-    )
+    card_menu(controls, "quota")
+    quota_slot = st.skeleton(height=CHART_HEIGHT)
 
 flow_col, funnel_col = st.columns([3, 2])
 with flow_col.container(border=True, height="stretch"):
-    card_header(
-        "Pipeline flow", "Deal value from lead source, through plan, to outcome"
-    )
-    st.echarts_chart(
-        charts.pipeline_flow(deals),
-        height=CHART_HEIGHT,
-        alt="Deal value flowing from lead source through plan to won, open, or lost",
-    )
-with funnel_col.container(border=True, height="stretch"):
-    card_header("Stage conversion", "Deals that reached each stage")
-    st.echarts_chart(
-        charts.stage_funnel(deals),
-        height=CHART_HEIGHT,
-        alt="Funnel of deals reaching each sales stage",
-    )
-
-gauge_col, owner_col = st.columns([2, 3])
-with gauge_col.container(border=True, height="stretch"):
-    card_header(
-        "Quarter bookings",
-        f"{money_md(quarter_bookings)} of {money_md(quarterly_quota)} quota",
-        help="Quota is the trailing average quarterly bookings plus 15%.",
-    )
-    st.echarts_chart(
-        charts.quota_gauge(
-            quarter_bookings / quarterly_quota * 100,
-            pace=days_elapsed / quarter_days * 100,
-        ),
-        height=CHART_HEIGHT,
-        alt="Quarter-to-date bookings as a share of quota",
-    )
-with owner_col.container(border=True, height="stretch"):
-    card_header("Open pipeline by owner", "Click a bar to filter the deals below")
-    owner_totals = (open_deals.groupby("owner")["amount"].sum() / 1_000).sort_values()
-    owner_event = st.echarts_chart(
-        charts.pipeline_by_owner(owner_totals),
-        on_select="rerun",
-        height=CHART_HEIGHT,
-        alt="Open pipeline value per account executive",
-    )
-
-selected_owners = [
-    owner_totals.index[index]
-    for group in owner_event.selection.selected
-    for index in group["data_indices"]
-]
-
-with st.container(border=True):
     controls = card_header(
-        "Deals",
-        "Open deals first, then the most recent closes. Use the row menu to close a deal.",
+        "Pipeline flow",
+        "Deal value from lead source, through plan, to outcome",
+        certified=True,
+    )
+    card_menu(controls, "pipeline_flow")
+    flow_slot = st.skeleton(height=CHART_HEIGHT)
+with funnel_col.container(border=True, height="stretch"):
+    controls = card_header(
+        "Stage conversion", "Deals that reached each stage", certified=True
+    )
+    card_menu(controls, "stage_funnel")
+    funnel_slot = st.skeleton(height=CHART_HEIGHT)
+
+owner_col, deals_col = st.columns([2, 3])
+with owner_col.container(border=True, height="stretch"):
+    card_header("Open pipeline by owner", "Click a bar to filter the deals")
+    owner_slot = st.skeleton(height=DEALS_HEIGHT)
+with deals_col.container(border=True, height="stretch"):
+    controls = card_header(
+        "Deals", "Open deals first, then recent closes. Close a deal from its row menu."
     )
     open_pivot = controls.button(
         "Pivot",
@@ -211,70 +159,168 @@ with st.container(border=True):
     # Left-aligned so the dataframe's hover toolbar can't cover the toggle.
     with st.container(horizontal=True, vertical_alignment="center"):
         show_closed = st.toggle("Show closed", value=False, key="show_closed")
-        if selected_owners:
-            st.badge(selected_owners[0], icon=":material/person:", color="primary")
+        owner_badge = st.empty()
+    deals_slot = st.skeleton(height=DEALS_HEIGHT)
 
-    table = deals if show_closed else open_deals
-    if selected_owners:
-        table = table[table["owner"].isin(selected_owners)]
-    if open_pivot:
-        explore_deals(table)
-    table = table.assign(
-        is_open=table["stage"].isin(data.OPEN_STAGES),
-    ).sort_values(["is_open", "close_date"], ascending=[False, True])
-    table = table.assign(
-        actions=pd.Series(
-            [[WON_ACTION, LOST_ACTION] if is_open else [] for is_open in table["is_open"]],
-            index=table.index,
-            dtype=object,
-        ),
-        stage=table["stage"].map(lambda stage: [stage]),
-    )[
-        [
-            "actions",
-            "account",
-            "stage",
-            "amount",
-            "probability",
-            "weighted",
-            "close_date",
-            "owner",
-            "source",
-            "plan",
-            "region",
-        ]
-    ]
-    st.dataframe(
-        table,
-        column_config={
-            "actions": st.column_config.ButtonColumn(
-                "",
-                type="tertiary",
-                pinned=True,
-                key="deal_click",
-                on_click=handle_deal_action,
-                args=(table,),
-            ),
-            "account": st.column_config.TextColumn("Account", pinned=True),
-            "stage": st.column_config.MultiselectColumn(
-                "Stage",
-                options=data.STAGES,
-                color=[STAGE_COLORS[stage] for stage in data.STAGES],
-            ),
-            "amount": st.column_config.NumberColumn("Amount", format="$%,d"),
-            "probability": st.column_config.ProgressColumn(
-                "Probability", min_value=0, max_value=1, format="percent"
-            ),
-            "weighted": st.column_config.NumberColumn("Weighted", format="$%,d"),
-            "close_date": st.column_config.DateColumn(
-                "Expected close", format="MMM D, YYYY"
-            ),
-            "owner": st.column_config.TextColumn("Owner"),
-            "source": st.column_config.TextColumn("Source"),
-            "plan": st.column_config.TextColumn("Plan"),
-            "region": st.column_config.TextColumn("Region"),
-        },
-        hide_index=True,
-        height=420,
-        alt="Sales deals with stage, value, and expected close date",
+# The KPI row loads the deals inside its skeleton, so the loader's spinner
+# text labels it. The other skeletons fill once that load finishes.
+with kpi_row, st.skeleton(height=KPI_HEIGHT):
+    deals = data.with_deal_metrics(
+        data.filter_deals(data.apply_deal_overrides(data.load_deals()), filters)
     )
+    open_deals = deals[deals["stage"].isin(data.OPEN_STAGES)]
+    closed = deals[deals["stage"].isin(["Closed won", "Closed lost"])]
+    won = closed[closed["stage"] == "Closed won"]
+    win_rate = len(won) / len(closed) if len(closed) else 0
+    cycle = (
+        pd.to_datetime(won["close_date"]) - pd.to_datetime(won["created"])
+    ).dt.days.mean()
+    kpi = {
+        "delta_color": "off",
+        "delta_arrow": "off",
+        "border": True,
+        "height": KPI_HEIGHT,
+    }
+    with st.container(horizontal=True):
+        st.metric(
+            "Open pipeline :green[:material/verified:]",
+            money(open_deals["amount"].sum()),
+            f"{len(open_deals)} deals",
+            icon=":material/account_tree:",
+            **kpi,
+        )
+        st.metric(
+            "Weighted forecast :green[:material/verified:]",
+            money(open_deals["weighted"].sum()),
+            f"{open_deals['weighted'].sum() / max(open_deals['amount'].sum(), 1):.0%} of pipeline",
+            icon=":material/query_stats:",
+            help="Open deal value weighted by each stage's win probability.",
+            **kpi,
+        )
+        st.metric(
+            "Win rate :green[:material/verified:]",
+            f"{win_rate:.0%}",
+            f"{len(won)} of {len(closed)} closed",
+            icon=":material/handshake:",
+            **kpi,
+        )
+        st.metric(
+            "Avg. sales cycle",
+            f"{cycle:.0f} days" if pd.notna(cycle) else "–",
+            "created to closed won",
+            icon=":material/schedule:",
+            **kpi,
+        )
+
+bookings_slot.echarts_chart(
+    charts.bookings(
+        data.bookings_by_month(deals, filters.months), data.milestones(filters)
+    ),
+    height=CHART_HEIGHT,
+    alt="Closed-won bookings per month, with the current month's projection",
+)
+
+quarter_start = pd.Timestamp(date.today()).to_period("Q").start_time.date()
+quarter_end = pd.Timestamp(date.today()).to_period("Q").end_time.date()
+quarter_bookings = won.loc[won["close_date"] >= quarter_start, "amount"].sum()
+quarterly_quota = max(won["amount"].sum() / max(filters.months / 3, 1) * 1.15, 1)
+days_elapsed = (date.today() - quarter_start).days + 1
+quarter_days = (quarter_end - quarter_start).days + 1
+quota_slot.echarts_chart(
+    charts.quota_gauge(
+        quarter_bookings, quarterly_quota, pace=days_elapsed / quarter_days * 100
+    ),
+    height=CHART_HEIGHT,
+    alt="Quarter-to-date bookings as a share of quota",
+)
+
+flow_slot.echarts_chart(
+    charts.pipeline_flow(deals),
+    height=CHART_HEIGHT,
+    alt="Deal value flowing from lead source through plan to won, open, or lost",
+)
+funnel_slot.echarts_chart(
+    charts.stage_funnel(deals),
+    height=CHART_HEIGHT,
+    alt="Funnel of deals reaching each sales stage",
+)
+
+owner_totals = (open_deals.groupby("owner")["amount"].sum() / 1_000).sort_values()
+owner_event = owner_slot.echarts_chart(
+    charts.pipeline_by_owner(owner_totals),
+    on_select="rerun",
+    height=DEALS_HEIGHT,
+    alt="Open pipeline value per account executive",
+)
+selected_owners = [
+    owner_totals.index[index]
+    for group in owner_event.selection.selected
+    for index in group["data_indices"]
+]
+if selected_owners:
+    owner_badge.badge(selected_owners[0], icon=":material/person:", color="primary")
+
+table = deals if show_closed else open_deals
+if selected_owners:
+    table = table[table["owner"].isin(selected_owners)]
+if open_pivot:
+    explore_deals(table)
+table = table.assign(
+    is_open=table["stage"].isin(data.OPEN_STAGES),
+).sort_values(["is_open", "close_date"], ascending=[False, True])
+table = table.assign(
+    actions=pd.Series(
+        [[WON_ACTION, LOST_ACTION] if is_open else [] for is_open in table["is_open"]],
+        index=table.index,
+        dtype=object,
+    ),
+    stage=table["stage"].map(lambda stage: [stage]),
+)[
+    [
+        "actions",
+        "account",
+        "stage",
+        "amount",
+        "probability",
+        "weighted",
+        "close_date",
+        "owner",
+        "source",
+        "plan",
+        "region",
+    ]
+]
+deals_slot.dataframe(
+    table,
+    column_config={
+        "actions": st.column_config.ButtonColumn(
+            "",
+            type="tertiary",
+            pinned=True,
+            key="deal_click",
+            on_click=handle_deal_action,
+            args=(table,),
+        ),
+        "account": st.column_config.TextColumn("Account", pinned=True),
+        "stage": st.column_config.MultiselectColumn(
+            "Stage",
+            options=data.STAGES,
+            color=[STAGE_COLORS[stage] for stage in data.STAGES],
+        ),
+        "amount": st.column_config.NumberColumn("Amount", format="$%,d"),
+        "probability": st.column_config.ProgressColumn(
+            "Probability", min_value=0, max_value=1, format="percent"
+        ),
+        "weighted": st.column_config.NumberColumn("Weighted", format="$%,d"),
+        "close_date": st.column_config.DateColumn(
+            "Expected close", format="MMM D, YYYY"
+        ),
+        "owner": st.column_config.TextColumn("Owner"),
+        "source": st.column_config.TextColumn("Source"),
+        "plan": st.column_config.TextColumn("Plan"),
+        "region": st.column_config.TextColumn("Region"),
+    },
+    hide_index=True,
+    height=DEALS_HEIGHT,
+    alt="Sales deals with stage, value, and expected close date",
+)

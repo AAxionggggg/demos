@@ -1,3 +1,13 @@
+"""Accounts: a searchable customer book with a brushable scatter plot.
+
+The cards cross-filter (brushing the scatter plot filters the table), so they
+share one load instead of running as independent fragments. The page still
+paints its layout first: it draws every card's frame, header, and skeleton,
+then loads the book once and fills each card. On reruns, such as typing in the
+search box, each skeleton keeps the previous table mounted until its new
+content arrives, so the tables update in place.
+"""
+
 from datetime import date, timedelta
 
 import pandas as pd
@@ -8,11 +18,15 @@ from utils.components import (
     account_columns,
     account_table,
     card_header,
+    card_menu,
     open_clicked_account,
-    page_header,
+    section_header,
 )
 
 import streamlit as st
+
+CARD_HEIGHT = 340
+TABLE_HEIGHT = 460
 
 # The pivot only handles scalar columns, so list-valued fields such as
 # products and the MRR trend are left out.
@@ -66,7 +80,12 @@ def explore_accounts(accounts: pd.DataFrame) -> None:
 
 
 filters = data.current_filters()
-actions = page_header("Accounts", ":material/groups:", filters.describe())
+
+actions = section_header(
+    "Customer book",
+    help="Every account with its plan, revenue, health, and renewal date.",
+    sql="accounts",
+)
 
 with st.container(horizontal=True, vertical_alignment="center"):
     query = st.text_input(
@@ -88,24 +107,71 @@ with st.container(horizontal=True, vertical_alignment="center"):
         width="content",
     )
 
-with st.skeleton(height=420):
-    accounts, _ = data.load_book()
-accounts = data.filter_accounts(accounts, filters)
-accounts = accounts[accounts["status"].isin(statuses or data.STATUSES)]
-if query:
-    haystack = accounts["name"] + " " + accounts["owner"] + " " + accounts["industry"]
-    accounts = accounts[haystack.str.contains(query, case=False, regex=False)]
 
+def matching_accounts(accounts: pd.DataFrame) -> pd.DataFrame:
+    """Apply the global filters, the status pills, and the search box."""
+    accounts = data.filter_accounts(accounts, filters)
+    accounts = accounts[accounts["status"].isin(statuses or data.STATUSES)]
+    if query:
+        haystack = (
+            accounts["name"] + " " + accounts["owner"] + " " + accounts["industry"]
+        )
+        accounts = accounts[haystack.str.contains(query, case=False, regex=False)]
+    return accounts
+
+
+def export_csv() -> bytes:
+    # Called only when the button is clicked, so the button renders before the
+    # data has loaded.
+    accounts, _ = data.load_book()
+    return data.accounts_csv(matching_accounts(accounts))
+
+
+actions.download_button(
+    "Export",
+    export_csv,
+    file_name="nimbus_accounts.csv",
+    mime="text/csv",
+    icon=":material/download:",
+    on_click="ignore",
+)
+
+# Layout first: draw every card's frame, header, and skeleton before loading.
 scatter_col, renewals_col = st.columns([3, 2])
-with scatter_col.container(border=True, height="stretch"):
-    card_header(
+scatter_card = scatter_col.container(border=True, height="stretch")
+with scatter_card:
+    controls = card_header(
         "Health vs. revenue",
         "Bubble size shows seats. Use the select tool to filter the table.",
+        certified=True,
     )
+    card_menu(controls, "health_scatter")
+
+with renewals_col.container(border=True, height="stretch"):
+    renewals_controls = card_header("Upcoming renewals", "Next 90 days, soonest first")
+    renewals_slot = st.skeleton(height=CARD_HEIGHT)
+
+with st.container(border=True):
+    table_controls = card_header("All accounts", "Sorted by MRR, largest first")
+    table_badge = table_controls.empty()
+    open_pivot = table_controls.button(
+        "Pivot",
+        icon=":material/pivot_table_chart:",
+        help="Explore these accounts in a pivot table",
+    )
+    table_slot = st.skeleton(height=TABLE_HEIGHT)
+
+# The scatter plot loads the book inside its own skeleton, so the loader's
+# spinner text labels it. The other skeletons fill once that load finishes.
+with scatter_card, st.skeleton(height=CARD_HEIGHT):
+    book, _ = data.load_book()
+    accounts = matching_accounts(book)
     event = st.echarts_chart(
         charts.health_scatter(accounts),
         on_select="rerun",
-        height=340,
+        # No key: a keyed chart would keep its brush indices when the search
+        # changes the data, so they would point at different accounts.
+        height=CARD_HEIGHT,
         alt="Account health score against MRR by plan; most revenue sits in healthy accounts",
     )
 
@@ -115,56 +181,38 @@ for group in event.selection.selected:
     plan_ids = accounts.index[accounts["plan"] == data.PLANS[group["series_index"]]]
     brushed += [plan_ids[index] for index in group["data_indices"]]
 
-with renewals_col.container(border=True, height="stretch"):
-    horizon = date.today() + timedelta(days=90)
-    renewals = accounts[(accounts["renewal_date"] <= horizon) & (accounts["mrr"] > 0)]
-    renewals = renewals.sort_values("renewal_date")
-    controls = card_header("Upcoming renewals", "Next 90 days, soonest first")
-    controls.badge(f"{len(renewals)} accounts", color="gray")
-    renewal_table = account_table(renewals)[
-        ["view", "name", "renewal_date", "mrr"]
-    ]
-    st.dataframe(
-        renewal_table,
-        column_config=account_columns(key="renewal_click"),
-        hide_index=True,
-        height=340,
-        alt="Accounts renewing in the next 90 days",
-    )
-    open_clicked_account(renewal_table, "renewal_click")
+horizon = date.today() + timedelta(days=90)
+renewals = accounts[(accounts["renewal_date"] <= horizon) & (accounts["mrr"] > 0)]
+renewals_controls.badge(f"{len(renewals)} accounts", color="gray")
+renewal_table = account_table(renewals.sort_values("renewal_date"))[
+    ["view", "name", "renewal_date", "mrr"]
+]
+renewals_slot.dataframe(
+    renewal_table,
+    column_config=account_columns(key="renewal_click"),
+    hide_index=True,
+    height=CARD_HEIGHT,
+    alt="Accounts renewing in the next 90 days",
+)
+open_clicked_account(renewal_table, "renewal_click")
 
 table_accounts = accounts.loc[brushed] if brushed else accounts
-with st.container(border=True):
-    controls = card_header(
-        "All accounts",
-        f"{len(table_accounts)} of {len(accounts)} accounts"
-        + (" in the scatter selection" if brushed else ""),
+if brushed:
+    table_badge.badge(
+        f"Scatter selection · {len(table_accounts)} of {len(accounts)}",
+        icon=":material/select_all:",
+        color="primary",
     )
-    if brushed:
-        controls.badge(
-            "Scatter selection", icon=":material/select_all:", color="primary"
-        )
-    if controls.button(
-        "Pivot",
-        icon=":material/pivot_table_chart:",
-        help="Explore these accounts in a pivot table",
-    ):
-        explore_accounts(table_accounts)
-    table = account_table(table_accounts.sort_values("mrr", ascending=False))
-    st.dataframe(
-        table,
-        column_config=account_columns(key="account_click"),
-        hide_index=True,
-        height=460,
-        alt="All customer accounts",
-    )
-    open_clicked_account(table, "account_click")
-
-actions.download_button(
-    "Export",
-    data.accounts_csv(table_accounts),
-    file_name="nimbus_accounts.csv",
-    mime="text/csv",
-    icon=":material/download:",
-    on_click="ignore",
+else:
+    table_badge.badge(f"{len(accounts)} accounts", color="gray")
+if open_pivot:
+    explore_accounts(table_accounts)
+table = account_table(table_accounts.sort_values("mrr", ascending=False))
+table_slot.dataframe(
+    table,
+    column_config=account_columns(key="account_click"),
+    hide_index=True,
+    height=TABLE_HEIGHT,
+    alt="All customer accounts",
 )
+open_clicked_account(table, "account_click")

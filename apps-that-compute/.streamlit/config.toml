@@ -1,0 +1,129 @@
+# "Cairn" theme: dual light/dark with compact dashboard spacing, adapted from
+# the skill's bi-dashboard template. Categorical palettes were checked with a
+# CVD validator in both modes (adjacent pairs; the first three slots also pass
+# all-pairs for scatter charts).
+
+[theme]
+font = "'Plus Jakarta Sans':https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200..800&display=swap"
+headingFont = "'Plus Jakarta Sans':https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200..800&display=swap"
+codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100..800&display=swap"
+baseFontSize = 14
+baseFontWeight = 400
+codeFontSize = "13px"
+headingFontSizes = ["28px", "20px", "16px", "15px", "14px", "12px"]
+headingFontWeights = [700, 650, 650, 600, 600, 600]
+metricValueFontSize = "1.75rem"
+metricValueFontWeight = 700
+baseRadius = "0.75rem"
+buttonRadius = "0.6rem"
+showWidgetBorder = true
+showSidebarBorder = true
+linkUnderline = false
+paddingTop = "1rem"
+paddingBottom = "3rem"
+
+[theme.sidebar]
+paddingTop = "1rem"
+paddingBottom = "1.5rem"
+
+[theme.light]
+primaryColor = "#007A6D"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F2F6F5"
+codeBackgroundColor = "#F2F6F5"
+textColor = "#0F1A19"
+linkColor = "#007A6D"
+borderColor = "#E1E8E6"
+codeTextColor = "#33403E"
+blueColor = "#0B84E5"
+greenColor = "#16A34A"
+yellowColor = "#CA8A04"
+orangeColor = "#EA580C"
+redColor = "#DC2626"
+violetColor = "#7C5BD6"
+grayColor = "#6B7472"
+chartCategoricalColors = [
+    "#008A7B",
+    "#E8590C",
+    "#5B5BD6",
+    "#D6409F",
+    "#0B84E5",
+    "#B87A00",
+    "#8E4EC6",
+    "#E5484D",
+]
+chartSequentialColors = [
+    "#EAF6F3",
+    "#CDEBE5",
+    "#A6DCD2",
+    "#7BC9BC",
+    "#4FB3A4",
+    "#239C8C",
+    "#008A7B",
+    "#00726A",
+    "#005B55",
+    "#004441",
+]
+dataframeBorderColor = "#E1E8E6"
+dataframeHeaderBackgroundColor = "#F6F9F8"
+dataframeHeaderTextColor = "#56625F"
+
+[theme.dark]
+primaryColor = "#0A8275"
+backgroundColor = "#0B1012"
+secondaryBackgroundColor = "#151C1E"
+codeBackgroundColor = "#151C1E"
+textColor = "#E6EDEC"
+linkColor = "#5FD3C3"
+borderColor = "#243032"
+codeTextColor = "#C5D1CF"
+blueColor = "#3B9BFF"
+greenColor = "#34D399"
+yellowColor = "#FACC15"
+orangeColor = "#FB923C"
+redColor = "#F87171"
+violetColor = "#A78BFA"
+grayColor = "#8C9896"
+chartCategoricalColors = [
+    "#12A08F",
+    "#E5641A",
+    "#6E6AE8",
+    "#D9529F",
+    "#2F8FE8",
+    "#BC8000",
+    "#9A6BE0",
+    "#E5534B",
+]
+chartSequentialColors = [
+    "#10292A",
+    "#123536",
+    "#144344",
+    "#165352",
+    "#186461",
+    "#1A7770",
+    "#1C8B80",
+    "#2BA394",
+    "#5BBFB1",
+    "#97DACF",
+]
+dataframeBorderColor = "#243032"
+dataframeHeaderBackgroundColor = "#11171A"
+dataframeHeaderTextColor = "#A3B0AE"
+
+[theme.light.sidebar]
+backgroundColor = "#F8FAF9"
+secondaryBackgroundColor = "#EEF3F2"
+codeBackgroundColor = "#EEF3F2"
+textColor = "#0F1A19"
+borderColor = "#E1E8E6"
+primaryColor = "#007A6D"
+linkColor = "#007A6D"
+
+[theme.dark.sidebar]
+backgroundColor = "#0E1416"
+secondaryBackgroundColor = "#182022"
+codeBackgroundColor = "#182022"
+textColor = "#E6EDEC"
+borderColor = "#243032"
+primaryColor = "#0A8275"
+linkColor = "#5FD3C3"
