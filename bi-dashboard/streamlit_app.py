@@ -19,6 +19,10 @@ Demonstrates:
 - ``st.dataframe`` with ``ButtonColumn`` row actions, ``MultiselectColumn``
   colored badges, and sparkline / progress columns
 - ``@st.dialog(position="right")`` side drawers for account and metric details
+- An Ask AI drawer, from the header or any card's ⋮ menu: a simulated
+  assistant with ``st.chat_message``, ``st.chat_input``, a compact
+  ``st.status`` over a step timeline, ``st.write_stream``, and ``st.feedback``.
+  It answers from the same data and filters as the cards, without a model.
 - ``streamlit-pivot`` (a Components v2 package) in a large ``@st.dialog``
   for drag-and-drop pivoting and cell drill-down of the accounts and deals
   tables
@@ -34,7 +38,7 @@ own queries.
 
 from pathlib import Path
 
-from utils import data
+from utils import assistant, data
 
 import streamlit as st
 
@@ -88,6 +92,12 @@ with st.container(horizontal=True, vertical_alignment="center"):
         on_click=reset_filters,
         help="Reset the period, filters, and annotations",
     )
+    if st.button(
+        "Ask AI",
+        icon=":material/auto_awesome:",
+        help="Ask about this page, using the current filters",
+    ):
+        assistant.ask_ai_drawer(page.title)
 
 with st.container(horizontal=True, vertical_alignment="center", gap="medium"):
     st.segmented_control(

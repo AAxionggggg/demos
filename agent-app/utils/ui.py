@@ -112,8 +112,14 @@ def render_user(message: dict[str, Any]) -> None:
             st.markdown(message["text"])
 
 
-def render_assistant(message: dict[str, Any], *, followups: bool) -> None:
-    """Render a reply from history, with follow-up suggestions if it's the latest."""
+def render_assistant(message: dict[str, Any], *, last: bool, busy: bool) -> None:
+    """Render a reply from history, with follow-up suggestions if it's the latest.
+
+    The pills sit in a container inside an ``st.empty`` slot. While a new reply
+    runs (``busy``), the slot stays empty, which removes the container and its
+    pills right away. Without it, the pills would stay on screen, faded, until
+    the reply finishes streaming.
+    """
     with st.chat_message("assistant", avatar=AVATAR):
         if "note" in message:
             st.markdown(message["note"])
@@ -123,13 +129,16 @@ def render_assistant(message: dict[str, Any], *, followups: bool) -> None:
         st.markdown(reply.answer)
         result(reply, message["id"])
         actions(reply, message["id"])
-        if followups and reply.followups:
-            st.pills(
-                "Follow up",
-                reply.followups,
-                label_visibility="collapsed",
-                key=f"followup_{message['id']}",
-            )
+        if last and reply.followups:
+            slot = st.empty()
+            if not busy:
+                with slot.container():
+                    st.pills(
+                        "Follow up",
+                        reply.followups,
+                        label_visibility="collapsed",
+                        key=f"followup_{message['id']}",
+                    )
 
 
 def respond(text: str, attachments: list[Attachment]) -> dict[str, Any]:

@@ -167,7 +167,7 @@ elif history:
             if last and text is None:
                 ui.stopped(retry)
         else:
-            ui.render_assistant(message, followups=last and text is None)
+            ui.render_assistant(message, last=last, busy=text is not None)
 
 if text is not None:
     if not retrying:

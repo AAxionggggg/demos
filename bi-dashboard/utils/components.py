@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, TypeAlias
 
 import streamlit as st
-from utils import charts, data
+from utils import assistant, charts, data
 from utils.definitions import DEFINITIONS
 from utils.formatting import change, money, signed_pct
 
@@ -48,6 +48,7 @@ VIEW_ACTION = ":material/side_navigation: View"
 # Marks a certified metric, like a verified badge in a BI tool.
 VERIFIED = ":green-badge[:material/verified:]"
 _CARD_ACTIONS = {
+    "ask": ":material/auto_awesome: Ask AI",
     "measured": ":material/menu_book: What's measured",
     "sql": ":material/data_object: SQL query",
     "feedback": ":material/rate_review: Feedback",
@@ -103,7 +104,7 @@ def card_header(
 def card_menu(
     controls: DeltaGenerator, card: str, toggles: dict[str, str] | None = None
 ) -> None:
-    """Add a ⋮ menu with the card's definition, SQL query, and a feedback form.
+    """Add a ⋮ menu with Ask AI, the card's definition, SQL query, and a feedback form.
 
     ``toggles`` maps Session State keys to option labels such as ``"forecast"``.
     Picking one flips its flag in the menu's callback, so the card already reads
@@ -127,14 +128,16 @@ def card_menu(
     # A label that is only a menu icon (with no ``icon``) hides the chevron.
     choice = controls.menu_button(
         ":material/more_vert:",
-        [*toggles, *_CARD_ACTIONS],
+        ["ask", *toggles, *(a for a in _CARD_ACTIONS if a != "ask")],
         format_func=label,
         type="tertiary",
         key=key,
         help="More options",
         on_click=flip_toggle,
     )
-    if choice == "measured":
+    if choice == "ask":
+        assistant.ask_ai_drawer(card)
+    elif choice == "measured":
         definition_drawer(card)
     elif choice == "sql":
         sql_dialog(card)
