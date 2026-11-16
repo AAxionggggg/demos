@@ -1,0 +1,130 @@
+# "Ivory" theme: a calm, literary look for a chat app. Warm ivory surfaces, a
+# clay accent, a serif for headings and a soft sans for text, in light and dark.
+# The clay passes 4.5:1 against white button text and against the light
+# background. Categorical palettes were checked with a CVD simulation in both
+# modes (adjacent pairs; the first three slots also pass all-pairs).
+
+[theme]
+font = "'DM Sans':https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300..700&display=swap"
+headingFont = "'Source Serif 4':https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400..700&display=swap"
+codeFont = "'IBM Plex Mono':https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+baseFontSize = 15
+baseFontWeight = 400
+codeFontSize = "13px"
+headingFontSizes = ["36px", "24px", "19px", "16px", "15px", "13px"]
+headingFontWeights = [500, 500, 600, 600, 600, 600]
+metricValueFontSize = "1.7rem"
+metricValueFontWeight = 500
+baseRadius = "0.9rem"
+buttonRadius = "0.65rem"
+showWidgetBorder = true
+showSidebarBorder = true
+linkUnderline = false
+paddingTop = "1.5rem"
+paddingBottom = "2rem"
+
+[theme.sidebar]
+paddingTop = "1rem"
+paddingBottom = "1.5rem"
+
+[theme.light]
+primaryColor = "#B85636"
+backgroundColor = "#FAF9F5"
+secondaryBackgroundColor = "#F0EEE6"
+codeBackgroundColor = "#F0EEE6"
+textColor = "#1F1E1B"
+linkColor = "#A64B2D"
+borderColor = "#E3DFD4"
+codeTextColor = "#4A463C"
+blueColor = "#4A6FA5"
+greenColor = "#5E8A3C"
+yellowColor = "#B98A2E"
+orangeColor = "#C46A2D"
+redColor = "#B5402F"
+violetColor = "#7D4E7E"
+grayColor = "#73726C"
+chartCategoricalColors = [
+    "#B85636",
+    "#4A6FA5",
+    "#D4A24C",
+    "#6E8F4A",
+    "#7D4E7E",
+    "#D07090",
+    "#5C5850",
+    "#2F8A85",
+]
+chartSequentialColors = [
+    "#FBEFE9",
+    "#F5DACD",
+    "#EDBFAA",
+    "#E2A185",
+    "#D58463",
+    "#C76A47",
+    "#B85636",
+    "#99452A",
+    "#7A3520",
+    "#5C2716",
+]
+dataframeBorderColor = "#E3DFD4"
+dataframeHeaderBackgroundColor = "#F3F1EA"
+dataframeHeaderTextColor = "#5E5B52"
+
+[theme.dark]
+primaryColor = "#B85636"
+backgroundColor = "#262624"
+secondaryBackgroundColor = "#30302D"
+codeBackgroundColor = "#30302D"
+textColor = "#F3F1EA"
+linkColor = "#E59575"
+borderColor = "#3F3E3A"
+codeTextColor = "#D7D3C8"
+blueColor = "#7196D0"
+greenColor = "#8FB067"
+yellowColor = "#E3B45A"
+orangeColor = "#E08A55"
+redColor = "#E5735F"
+violetColor = "#B07DB0"
+grayColor = "#9C9A92"
+chartCategoricalColors = [
+    "#D9774F",
+    "#7196D0",
+    "#E3B45A",
+    "#4DB0A9",
+    "#8FB067",
+    "#E58AA8",
+    "#B07DB0",
+    "#B5B0A4",
+]
+chartSequentialColors = [
+    "#2B1C16",
+    "#3A2219",
+    "#4C2A1D",
+    "#613321",
+    "#783D27",
+    "#91492E",
+    "#AD5837",
+    "#C96B47",
+    "#E08A67",
+    "#F2B79C",
+]
+dataframeBorderColor = "#3F3E3A"
+dataframeHeaderBackgroundColor = "#2C2C29"
+dataframeHeaderTextColor = "#B5B2A8"
+
+[theme.light.sidebar]
+backgroundColor = "#F3F1EA"
+secondaryBackgroundColor = "#E9E6DC"
+codeBackgroundColor = "#E9E6DC"
+textColor = "#1F1E1B"
+borderColor = "#E3DFD4"
+primaryColor = "#B85636"
+linkColor = "#A64B2D"
+
+[theme.dark.sidebar]
+backgroundColor = "#1F1E1C"
+secondaryBackgroundColor = "#2A2A27"
+codeBackgroundColor = "#2A2A27"
+textColor = "#F3F1EA"
+borderColor = "#3F3E3A"
+primaryColor = "#B85636"
+linkColor = "#E59575"
