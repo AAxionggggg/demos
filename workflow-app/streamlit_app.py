@@ -1,6 +1,6 @@
 """Cairn Reorder desk: planners review the purchase orders an AI agent proposes.
 
-An "app that acts": the decision happens in the same app as the data. Every
+A workflow app: the decision happens in the same app as the data. Every
 morning a replenishment agent proposes purchase orders and explains each one.
 Planners adjust quantities and approve, hold, or reject them in an editable
 table or a review drawer. Every decision is validated against guardrails on

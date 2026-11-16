@@ -1,4 +1,4 @@
-# Cairn Reorder desk — an app that acts
+# Cairn Reorder desk — a workflow app
 
 Planners at Cairn, a fictional outdoor retailer, review the purchase orders an
 AI replenishment agent proposes every morning. They adjust quantities, then

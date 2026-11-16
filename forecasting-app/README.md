@@ -1,4 +1,4 @@
-# Cairn Demand lab — an app that computes
+# Cairn Demand lab — a forecasting app
 
 A what-if demand and pricing simulator for Cairn, a fictional outdoor retailer.
 Planners pull levers (price, a promo and its weeks, marketing spend, supply)

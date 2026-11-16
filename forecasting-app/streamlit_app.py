@@ -1,6 +1,6 @@
 """Cairn Demand lab: a what-if demand and pricing simulator for a fictional outdoor retailer.
 
-An "app that computes": the value is the computation, and it runs in Python
+A forecasting app: the value is the computation, and it runs in Python
 next to the data. Every lever change reruns a Monte Carlo simulation of the
 season (thousands of simulated futures with demand, price, and elasticity
 uncertainty), a lever sensitivity analysis, a price-response curve, and a
