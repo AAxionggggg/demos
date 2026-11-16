@@ -1,5 +1,7 @@
 # Cairn Demand lab — a forecasting app
 
+**Live demo:** [forecasting-app-demo.streamlit.app](https://forecasting-app-demo.streamlit.app/)
+
 A what-if demand and pricing simulator for Cairn, a fictional outdoor retailer.
 Planners pull levers (price, a promo and its weeks, marketing spend, supply)
 and every change reruns a Monte Carlo simulation of the next 26 weeks in

@@ -1,5 +1,7 @@
 # Cairn Reorder desk — a workflow app
 
+**Live demo:** [workflow-app-demo.streamlit.app](https://workflow-app-demo.streamlit.app/)
+
 Planners at Cairn, a fictional outdoor retailer, review the purchase orders an
 AI replenishment agent proposes every morning. They adjust quantities, then
 approve, hold, or reject each order, and every decision is checked against

@@ -1,5 +1,7 @@
 # Cairn Analyst — an agent app
 
+**Live demo:** [agent-app-demo.streamlit.app](https://agent-app-demo.streamlit.app/)
+
 An AI analyst for Cairn, a fictional outdoor retailer. People ask about sales,
 demand, and inventory in a chat, and the agent shows its work as it goes: its
 steps appear in a timeline, the answer streams in, and every reply carries live
