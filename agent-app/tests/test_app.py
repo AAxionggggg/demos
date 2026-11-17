@@ -71,6 +71,15 @@ def test_recent_chats_reopen_and_reorder(at: AppTest) -> None:
     assert len(recent_chats(at)) == 3
 
 
+def test_followups_send_their_prompt(at: AppTest) -> None:
+    ask(at, "Why did net revenue in the West fall last week?")
+    followup = next(p for p in at.pills if p.key.startswith("followup_"))
+    followup.set_value(":material/sell: Compare prices").run()
+    assert not at.exception
+    labels = [m.label for m in at.metric]
+    assert labels[-3:] == ["$224 (-10%)", "$249 today", "$274 (+10%)"]
+
+
 def test_unknown_requests_get_help(at: AppTest) -> None:
     ask(at, "What's the weather in Reno?")
     assert "can't answer that one yet" in answers(at)

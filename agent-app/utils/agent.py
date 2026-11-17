@@ -47,7 +47,7 @@ class Reply:
     answer: str  # Markdown, streamed into the message
     steps: list[Step] = field(default_factory=list)
     artifact: Any = None
-    followups: list[str] = field(default_factory=list)
+    followups: dict[str, str] = field(default_factory=dict)  # Label to prompt
 
     @property
     def thinking_seconds(self) -> int:
@@ -59,6 +59,10 @@ SUGGESTIONS = {
     ":material/sell: Compare prices": "Compare three price scenarios for the Summit down jacket",
     ":material/inventory: Draft restock orders": "Draft purchase orders for items at risk of stocking out",
     ":material/summarize: Summarize the week": "Summarize last week for the leadership update",
+}
+FOLLOWUPS = {
+    **SUGGESTIONS,
+    ":material/inventory: Restock the jacket": "Draft purchase orders to restock the Summit down jacket",
 }
 
 # Requests from before the session, oldest first, so the recent chats aren't empty
@@ -73,6 +77,10 @@ ROUTES: list[tuple[Kind, str]] = [
     ("summary", r"summar|leadership|update|brief|recap|report|kpi"),
     ("revenue", r"revenue|sales|fell|fall|drop|declin|down|why|west"),
 ]
+
+
+def followups(*labels: str) -> dict[str, str]:
+    return {label: FOLLOWUPS[label] for label in labels}
 
 
 def route(text: str, attachments: list[files.Attachment]) -> Kind:
@@ -163,11 +171,11 @@ price scenarios for when it's back."""
         answer,
         steps,
         artifact=change,
-        followups=[
-            "Draft purchase orders to restock the Summit down jacket",
-            "Compare three price scenarios for the Summit down jacket",
-            "Summarize last week for the leadership update",
-        ],
+        followups=followups(
+            ":material/inventory: Restock the jacket",
+            ":material/sell: Compare prices",
+            ":material/summarize: Summarize the week",
+        ),
     )
 
 
@@ -270,10 +278,10 @@ def pricing_reply() -> Reply:
         answer,
         steps,
         artifact=outcomes,
-        followups=[
-            "Draft purchase orders to restock the Summit down jacket",
-            "Why did net revenue in the West fall last week?",
-        ],
+        followups=followups(
+            ":material/inventory: Restock the jacket",
+            ":material/trending_down: Why West revenue fell",
+        ),
     )
 
 
@@ -353,7 +361,7 @@ weeks of demand."""
         answer,
         steps,
         artifact=Proposals(table),
-        followups=["Summarize last week for the leadership update"],
+        followups=followups(":material/summarize: Summarize the week"),
     )
 
 
@@ -459,7 +467,7 @@ the season.
         answer,
         steps,
         artifact=Summary(kpis, document, week),
-        followups=["Why did net revenue in the West fall last week?"],
+        followups=followups(":material/trending_down: Why West revenue fell"),
     )
 
 
@@ -494,7 +502,7 @@ def file_reply(text: str, attachments: list[files.Attachment]) -> Reply:
         answer,
         steps,
         artifact=lead,
-        followups=list(SUGGESTIONS.values())[:2],
+        followups=dict(list(SUGGESTIONS.items())[:2]),
     )
 
 
@@ -512,9 +520,7 @@ def help_reply() -> Reply:
             "No scripted analysis matches. Real agents would plan their own tool calls here.",
         )
     ]
-    return Reply(
-        "help", "Getting started", answer, steps, followups=list(SUGGESTIONS.values())
-    )
+    return Reply("help", "Getting started", answer, steps, followups=SUGGESTIONS)
 
 
 REVENUE_SQL = """\

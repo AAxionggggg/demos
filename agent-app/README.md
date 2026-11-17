@@ -38,7 +38,7 @@ suggestions.
 | Attach files, and stop a long run from the input | `st.chat_input(accept_file="multiple", file_type=..., submit_mode="stop")` |
 | "Thought for N seconds" over a timeline of tool calls | `st.status(type="compact")` around `st.status(type="step")`, with `:shimmer[...]` labels while each step runs |
 | The answer streams in | `st.write_stream(..., cursor=...)` |
-| Feedback on every answer, follow-up suggestions | `st.feedback("thumbs")`, `st.pills` |
+| Feedback on every answer, follow-up suggestions in one row above the input | `st.feedback("thumbs")`, `st.pills(wrap=False)` in `st.bottom` |
 | A canvas with the full analysis | `@st.dialog(position="right")` with `st.tabs` |
 | People approve what the agent proposes | `st.data_editor` with `CheckboxColumn`, server-side validation |
 | KPI cards with trends | `st.metric(chart_data=..., delta_description=...)` in `st.grid` |

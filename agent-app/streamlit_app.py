@@ -14,7 +14,8 @@ Demonstrates:
 - ``st.status(type="compact")`` over ``st.status(type="step")`` timelines, with
   ``:shimmer[...]`` labels while each step runs
 - ``st.write_stream`` with a cursor, ``st.feedback`` on every answer, and
-  follow-up suggestions with ``st.pills``
+  follow-up suggestions with ``st.pills(wrap=False)`` above the input in
+  ``st.bottom``
 - A canvas in ``@st.dialog(position="right")`` with tabs, ``st.echarts_chart``
   bridges, ranges, and trends, ``st.metric`` sparklines, and an
   ``st.data_editor`` where people approve the agent's purchase orders
@@ -106,6 +107,8 @@ with st.sidebar:
         "Python from that data."
     )
 
+# Created before the chat input, so the follow-ups sit right above it
+followup_slot = st.bottom.empty()
 submission = st.chat_input(
     "Ask about sales, demand, or inventory",
     accept_file="multiple",
@@ -136,8 +139,13 @@ elif retrying:
 # before the pills render, so the pills are gone by the time the reply streams.
 if text is None and not history and st.session_state.get("suggestion"):
     text = agent.SUGGESTIONS[st.session_state.suggestion]
-if text is None and history and "reply" in history[-1]:
-    text = st.session_state.get(f"followup_{history[-1]['id']}")
+latest = history[-1] if history else None
+has_followups = bool(latest and "reply" in latest and latest["reply"].followups)
+if text is None and latest and has_followups:
+    picked = st.session_state.get(f"followup_{latest['id']}")
+    text = latest["reply"].followups.get(picked) if picked else None
+    if text is None:
+        ui.followups(followup_slot, latest)
 
 if not history and text is None:
     st.space("large")
@@ -186,7 +194,7 @@ elif history:
             if last and text is None:
                 ui.stopped(retry)
         else:
-            ui.render_assistant(message, last=last, busy=text is not None)
+            ui.render_assistant(message)
 
 if text is not None:
     chats = ui.chats()
