@@ -61,12 +61,45 @@ COLUMNS: dict[str, Any] = {
 # Messages -------------------------------------------------------------------
 
 
-def messages() -> list[dict[str, Any]]:
-    return st.session_state.setdefault("messages", [])
-
-
 def new_id() -> str:
     return uuid.uuid4().hex[:8]
+
+
+def conversation(text: str) -> list[dict[str, Any]]:
+    """A finished exchange for a request, as it's kept in history."""
+    return [
+        {"role": "user", "id": new_id(), "text": text, "attachments": []},
+        {"role": "assistant", "id": new_id(), "reply": agent.reply(text)},
+    ]
+
+
+def chats() -> dict[str, list[dict[str, Any]]]:
+    """Every conversation in the session by ID, least recently active first.
+
+    A new session starts with a few earlier chats, so the sidebar has
+    something to show.
+    """
+    if "chats" not in st.session_state:
+        st.session_state.chats = {
+            new_id(): conversation(text) for text in agent.EARLIER_CHATS
+        }
+    return st.session_state.chats
+
+
+def chat_id() -> str:
+    """The ID of the open conversation."""
+    return st.session_state.setdefault("chat_id", new_id())
+
+
+def messages() -> list[dict[str, Any]]:
+    """The open conversation."""
+    return chats().setdefault(chat_id(), [])
+
+
+def title(history: list[dict[str, Any]]) -> str:
+    return next(
+        (m["reply"].title for m in history if "reply" in m), history[0]["text"][:48]
+    )
 
 
 def find(message_id: str) -> dict[str, Any]:

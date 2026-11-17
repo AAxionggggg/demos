@@ -34,6 +34,7 @@ suggestions.
 | Capability | API |
 | --- | --- |
 | Chat history with a custom avatar | `st.chat_message`, `st.session_state` |
+| Recent chats in the sidebar | `st.button(type="tertiary", wrap=False)` rows in `st.container(gap=None)` |
 | Attach files, and stop a long run from the input | `st.chat_input(accept_file="multiple", file_type=..., submit_mode="stop")` |
 | "Thought for N seconds" over a timeline of tool calls | `st.status(type="compact")` around `st.status(type="step")`, with `:shimmer[...]` labels while each step runs |
 | The answer streams in | `st.write_stream(..., cursor=...)` |

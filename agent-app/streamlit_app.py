@@ -9,6 +9,8 @@ purchase orders the agent drafts are approved there by a person.
 Demonstrates:
 - ``st.chat_message`` with a custom avatar, and ``st.chat_input`` with file
   attachments and ``submit_mode="stop"``, so a long run can be stopped
+- Recent chats in the sidebar as tertiary buttons with ``wrap=False``, in a
+  ``st.container(gap=None)``, so long titles end in an ellipsis
 - ``st.status(type="compact")`` over ``st.status(type="step")`` timelines, with
   ``:shimmer[...]`` labels while each step runs
 - ``st.write_stream`` with a cursor, ``st.feedback`` on every answer, and
@@ -60,7 +62,12 @@ SOURCES = pd.DataFrame(
 
 
 def new_chat() -> None:
-    st.session_state.messages = []
+    if ui.messages():
+        st.session_state.chat_id = ui.new_id()
+
+
+def open_chat(chat_id: str) -> None:
+    st.session_state.chat_id = chat_id
 
 
 def retry() -> None:
@@ -71,6 +78,21 @@ with st.sidebar:
     st.button(
         "New chat", icon=":material/edit_square:", width="stretch", on_click=new_chat
     )
+    recent = [(i, chat) for i, chat in reversed(ui.chats().items()) if chat]
+    if recent:
+        with st.container(gap="xsmall"):
+            st.caption("Recent")
+            with st.container(gap=None):
+                for chat_id, chat in recent:
+                    label = ui.title(chat)
+                    st.button(
+                        f"**{label}**" if chat_id == ui.chat_id() else label,
+                        type="tertiary",
+                        wrap=False,
+                        key=f"chat_{chat_id}",
+                        on_click=open_chat,
+                        args=(chat_id,),
+                    )
     with st.container(gap="xsmall"):
         st.caption("Connected data")
         st.table(SOURCES, border="horizontal", hide_index=True, hide_header=True)
@@ -137,13 +159,10 @@ if not history and text is None:
             key="suggestion",
         )
 elif history:
-    title = next(
-        (m["reply"].title for m in history if "reply" in m), history[0]["text"][:48]
-    )
     with st.container(
         horizontal=True, horizontal_alignment="distribute", vertical_alignment="center"
     ):
-        st.markdown(f"**{title}**", width="content")
+        st.markdown(f"**{ui.title(history)}**", width="content")
         with st.container(horizontal=True, width="content", gap="xsmall"):
             st.download_button(
                 ":material/download:",
@@ -170,6 +189,8 @@ elif history:
             ui.render_assistant(message, last=last, busy=text is not None)
 
 if text is not None:
+    chats = ui.chats()
+    chats[ui.chat_id()] = chats.pop(ui.chat_id())
     if not retrying:
         message = {
             "role": "user",

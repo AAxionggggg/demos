@@ -52,6 +52,25 @@ def test_pricing_compares_three_prices(at: AppTest) -> None:
     assert labels == ["$224 (-10%)", "$249 today", "$274 (+10%)"]
 
 
+def recent_chats(at: AppTest) -> list[str]:
+    return [b.label for b in at.sidebar.button if b.key and b.key.startswith("chat_")]
+
+
+def test_recent_chats_reopen_and_reorder(at: AppTest) -> None:
+    assert recent_chats(at) == [
+        "Summit jacket price scenarios",
+        "Weekly leadership update",
+    ]
+    next(b for b in at.button if b.label == "Weekly leadership update").click().run()
+    assert {"Net revenue", "Orders"} <= {m.label for m in at.metric}
+    assert recent_chats(at)[1] == "**Weekly leadership update**"
+
+    at.sidebar.button[0].click().run()
+    ask(at, "Why did net revenue in the West fall last week?")
+    assert recent_chats(at)[0] == "**Why West revenue fell**"
+    assert len(recent_chats(at)) == 3
+
+
 def test_unknown_requests_get_help(at: AppTest) -> None:
     ask(at, "What's the weather in Reno?")
     assert "can't answer that one yet" in answers(at)

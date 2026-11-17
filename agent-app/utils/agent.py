@@ -61,6 +61,12 @@ SUGGESTIONS = {
     ":material/summarize: Summarize the week": "Summarize last week for the leadership update",
 }
 
+# Requests from before the session, oldest first, so the recent chats aren't empty
+EARLIER_CHATS = [
+    "Summarize last week for the leadership update",
+    "Compare three price scenarios for the Summit down jacket",
+]
+
 ROUTES: list[tuple[Kind, str]] = [
     ("pricing", r"price|pricing|scenario|elastic|discount|markdown|simulat"),
     ("restock", r"restock|reorder|replenish|purchase|stock|inventory|\border"),
